@@ -26,14 +26,14 @@ export const HUD: React.FC<HUDProps> = ({
     };
 
     return (
-        <div className={`absolute inset-0 pointer-events-none transition-all duration-700 z-[1002] ${isExpanded ? 'bg-black/40 backdrop-blur-sm' : 'bg-transparent'}`}>
+        <div className="absolute inset-0 pointer-events-none p-6 lg:p-12 z-[1002]">
             {/* Top Right: Status & Quick Lock */}
             <div className="absolute top-6 right-6 lg:top-12 lg:right-12 flex flex-col items-end gap-4 pointer-events-auto">
                 <button
                     onClick={() => setIsLocked(true)}
-                    className="flex items-center gap-3 px-6 py-3 bg-accent text-sienna dark:bg-white dark:text-sienna rounded-full font-bold text-[10px] uppercase tracking-[0.4em] shadow-xl hover:scale-105 active:scale-95 transition-all"
+                    className="flex items-center gap-2.5 px-5 py-2.5 bg-accent text-sienna dark:bg-white dark:text-sienna rounded-full font-bold text-[9px] uppercase tracking-[0.3em] shadow-lg hover:scale-105 active:scale-95 transition-all"
                 >
-                    <Lock className="w-4 h-4" /> Lock Studio
+                    <Lock className="w-3.5 h-3.5" /> Lock
                 </button>
             </div>
 
@@ -42,34 +42,34 @@ export const HUD: React.FC<HUDProps> = ({
                 {/* Main FAB Toggle */}
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className={`w-16 h-16 lg:w-20 lg:h-20 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl z-50 
+                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl z-50 
                     ${isExpanded ? 'bg-sienna text-white rotate-45 scale-90' : 'bg-accent text-sienna dark:bg-white dark:text-sienna rotate-0 scale-100 hover:scale-105'}`}
                 >
-                    <Plus className="w-8 h-8" />
+                    <Plus className="w-7 h-7" />
                 </button>
 
                 {/* Expanded Tools Panel */}
-                <div className={`flex flex-col gap-4 mb-2 transition-all duration-500 origin-bottom-right overflow-y-auto custom-scrollbar pr-2 max-w-[320px] 
+                <div className={`flex flex-col gap-3 mb-2 transition-all duration-500 origin-bottom-right overflow-y-auto custom-scrollbar pr-1 max-w-[260px] 
                 ${isExpanded ? 'scale-100 opacity-100 translate-y-0' : 'scale-0 opacity-0 translate-y-20 pointer-events-none'}`}>
 
                     {/* Spatial Controls Section (Scale, Rotate, Nudge) */}
-                    <div className="bg-white/95 dark:bg-sienna/95 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/20 dark:border-white/10 shadow-2xl space-y-6">
+                    <div className="bg-white/95 dark:bg-[#1a1512] backdrop-blur-2xl p-5 rounded-[2rem] border border-sienna/10 dark:border-white/5 shadow-2xl space-y-6">
                         <HUDSlider
-                            label="Projection Scale"
-                            icon={<Maximize className="w-3.5 h-3.5" />}
+                            label="Scale"
+                            icon={<Maximize className="w-3 h-3" />}
                             value={transform.scale} min={0.2} max={4} step={0.01}
                             onChange={(v: number) => setTransform((t: any) => ({ ...t, scale: v }))}
                         />
                         <HUDSlider
-                            label="Atelier Angle"
-                            icon={<Compass className="w-3.5 h-3.5" />}
+                            label="Angle"
+                            icon={<Compass className="w-3 h-3" />}
                             value={transform.rotation} min={-180} max={180}
                             onChange={(v: number) => setTransform((t: any) => ({ ...t, rotation: v }))}
                         />
 
                         {/* Precise Spatial Nudge */}
-                        <div className="pt-4 space-y-4 border-t border-sienna/10 dark:border-white/10">
-                            <p className="text-[8px] font-bold uppercase tracking-[0.3em] text-sienna/40 dark:text-white/40 text-center">Precise Spatial Nudge</p>
+                        <div className="pt-4 space-y-4 border-t border-sienna/5 dark:border-white/5">
+                            <p className="text-[7px] font-bold uppercase tracking-[0.3em] text-sienna/30 dark:text-white/30 text-center">Precise Nudge</p>
                             <div className="flex flex-col items-center gap-2">
                                 <HUDNudgeButton onClick={() => nudge(0, -1)}><ChevronUp /></HUDNudgeButton>
                                 <div className="flex gap-2">
@@ -82,12 +82,12 @@ export const HUD: React.FC<HUDProps> = ({
                         </div>
                     </div>
 
-                    {/* Quick Access Toggles Grid */}
-                    <div className="grid grid-cols-2 gap-3 w-full">
+                    {/* Quick Access Toggles (Vertical List) */}
+                    <div className="flex flex-col gap-2.5 w-full">
                         <ToolButton
                             active={settings.torchOn}
                             onClick={() => toggleTool(() => setSettings((s: any) => ({ ...s, torchOn: !s.torchOn })))}
-                            label="Flash"
+                            label="Flashlight"
                         >
                             {settings.torchOn ? <Zap /> : <ZapOff />}
                         </ToolButton>
@@ -95,7 +95,7 @@ export const HUD: React.FC<HUDProps> = ({
                         <ToolButton
                             active={settings.showGrid}
                             onClick={() => toggleTool(() => setSettings((s: any) => ({ ...s, showGrid: !s.showGrid })))}
-                            label="Grid"
+                            label="Alignment Grid"
                         >
                             <Grid3X3 />
                         </ToolButton>
@@ -103,7 +103,7 @@ export const HUD: React.FC<HUDProps> = ({
                         <ToolButton
                             active={mirror}
                             onClick={() => toggleTool(() => setMirror(!mirror))}
-                            label="Mirror"
+                            label="Mirror View"
                         >
                             <FlipHorizontal />
                         </ToolButton>
@@ -111,7 +111,7 @@ export const HUD: React.FC<HUDProps> = ({
                         <ToolButton
                             active={settings.showReference}
                             onClick={() => toggleTool(() => setSettings((s: any) => ({ ...s, showReference: !s.showReference })))}
-                            label="Reference"
+                            label="Trace Sample"
                         >
                             <ImageIcon />
                         </ToolButton>
@@ -130,14 +130,17 @@ export const HUD: React.FC<HUDProps> = ({
     );
 };
 
-const ToolButton = ({ active, onClick, children, label, wide }: any) => (
+const ToolButton = ({ active, onClick, children, label }: any) => (
     <button
         onClick={onClick}
-        className={`flex items-center gap-3 p-4 rounded-full transition-all shadow-lg border border-white/20 active:scale-95 ${wide ? 'w-full px-6' : 'w-full justify-center'} ${active ? 'bg-accent text-sienna dark:bg-white dark:text-sienna' : 'bg-white/95 dark:bg-sienna/95 backdrop-blur-md text-sienna/70 dark:text-white/70 hover:bg-white hover:text-accent'}`}
+        className={`flex items-center gap-3.5 px-5 py-3.5 rounded-full transition-all shadow-md border active:scale-95 w-full
+        ${active
+                ? 'bg-accent text-sienna border-accent shadow-accent/20'
+                : 'bg-white/95 dark:bg-[#1a1512] dark:text-white/80 border-sienna/10 dark:border-white/5 hover:bg-white hover:border-accent/40 shadow-black/5 dark:shadow-none'}`}
     >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
             {React.cloneElement(children as React.ReactElement<any>, { className: "w-4 h-4" })}
-            <span className="text-[8px] font-bold uppercase tracking-widest leading-none">{label}</span>
+            <span className="text-[8px] font-bold uppercase tracking-[0.2em] leading-none">{label}</span>
         </div>
     </button>
 );
@@ -145,9 +148,9 @@ const ToolButton = ({ active, onClick, children, label, wide }: any) => (
 const HUDNudgeButton = ({ onClick, children }: any) => (
     <button
         onClick={onClick}
-        className="w-10 h-10 rounded-full bg-sienna/5 dark:bg-white/5 border border-sienna/10 dark:border-white/10 flex items-center justify-center text-sienna dark:text-white hover:bg-accent hover:text-sienna dark:hover:bg-white dark:hover:text-sienna transition-all active:scale-90"
+        className="w-9 h-9 rounded-full bg-sienna/5 dark:bg-white/5 border border-sienna/10 dark:border-white/5 flex items-center justify-center text-sienna dark:text-white/60 hover:bg-accent hover:text-sienna dark:hover:bg-white dark:hover:text-sienna transition-all active:scale-90"
     >
-        {React.cloneElement(children as React.ReactElement<any>, { className: "w-4 h-4" })}
+        {React.cloneElement(children as React.ReactElement<any>, { className: "w-3.5 h-3.5" })}
     </button>
 );
 
