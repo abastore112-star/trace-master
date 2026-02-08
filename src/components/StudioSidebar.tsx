@@ -7,8 +7,8 @@ interface StudioSidebarProps {
     image: HTMLImageElement | null;
     isSidebarOpen: boolean;
     setIsSidebarOpen: (open: boolean) => void;
-    activeTab: 'lens' | 'canvas' | 'palette';
-    setActiveTab: (tab: 'lens' | 'canvas' | 'palette') => void;
+    activeTab: 'lens' | 'palette';
+    setActiveTab: (tab: 'lens' | 'palette') => void;
     options: ProcessingOptions;
     setOptions: React.Dispatch<React.SetStateAction<ProcessingOptions>>;
     opacity: number;
@@ -48,7 +48,6 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
 
             <div className="flex gap-2 p-1.5 bg-sienna/5 rounded-full border border-sienna/20 silk-panel shadow-inner">
                 <TabButton active={activeTab === 'lens'} onClick={() => setActiveTab('lens')}>Optical</TabButton>
-                <TabButton active={activeTab === 'canvas'} onClick={() => setActiveTab('canvas')}>Canvas</TabButton>
                 <TabButton active={activeTab === 'palette'} onClick={() => setActiveTab('palette')}>Guide</TabButton>
             </div>
 
@@ -95,32 +94,6 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                 {showAdvanced && <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>}
                                 <OptionToggle active={mirror} onClick={() => setMirror(!mirror)}>Mirror Projection</OptionToggle>
                                 <OptionToggle active={settings.lockWake} onClick={() => setSettings((s: any) => ({ ...s, lockWake: !s.lockWake }))}>Prevent Sleep</OptionToggle>
-                            </div>
-                        </InspectorSection>
-                    </div>
-                )}
-
-                {activeTab === 'canvas' && (
-                    <div className="space-y-10 animate-in fade-in duration-700">
-                        <InspectorSection title="Spatial Alignment">
-                            <ControlSlider label="Projection Scale" value={transform.scale} min={0.2} max={4} step={0.01} onChange={(v: number) => setTransform(t => ({ ...t, scale: v }))} />
-                            <ControlSlider label="Atelier Rotation" value={transform.rotation} min={-180} max={180} onChange={(v: number) => setTransform(t => ({ ...t, rotation: v }))} />
-
-                            <div className="pt-8">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-sienna/60 mb-6">Precise Spatial Nudge</p>
-                                <div className="flex flex-col items-center gap-4">
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div />
-                                        <NudgeButton onClick={() => nudge(0, -1)}><ChevronUp /></NudgeButton>
-                                        <div />
-                                        <NudgeButton onClick={() => nudge(-1, 0)}><ChevronLeft /></NudgeButton>
-                                        <button onClick={() => setTransform({ scale: 1, x: 0, y: 0, rotation: 0 })} className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center hover:bg-accent hover:text-sienna dark:hover:text-white transition-all text-accent shadow-sm border border-accent/20"><RotateCcw className="w-6 h-6" /></button>
-                                        <NudgeButton onClick={() => nudge(1, 0)}><ChevronRight /></NudgeButton>
-                                        <div />
-                                        <NudgeButton onClick={() => nudge(0, 1)}><ChevronDown /></NudgeButton>
-                                        <div />
-                                    </div>
-                                </div>
                             </div>
                         </InspectorSection>
                     </div>

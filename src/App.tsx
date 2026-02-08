@@ -9,6 +9,29 @@ import { applyFilters, extractPalette, analyzeImageForPresets } from './utils/im
 import { ProcessingOptions, TransformState, AppSettings } from './types/types';
 import { useTheme } from './utils/useTheme';
 
+const SketchPreview: React.FC<{ sketchCanvas: HTMLCanvasElement | null, mirror: boolean }> = ({ sketchCanvas, mirror }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (sketchCanvas && canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        canvasRef.current.width = sketchCanvas.width;
+        canvasRef.current.height = sketchCanvas.height;
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        ctx.drawImage(sketchCanvas, 0, 0);
+      }
+    }
+  }, [sketchCanvas]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)] ${mirror ? 'scale-x-[-1]' : ''}`}
+    />
+  );
+};
+
 const App: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const [view, setView] = useState<'landing' | 'studio'>('landing');
@@ -21,7 +44,7 @@ const App: React.FC = () => {
   const [palette, setPalette] = useState<string[]>([]);
   const [opacity, setOpacity] = useState(0.4);
   const [mirror, setMirror] = useState(false);
-  const [activeTab, setActiveTab] = useState<'lens' | 'canvas' | 'palette'>('lens');
+  const [activeTab, setActiveTab] = useState<'lens' | 'palette'>('lens');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAutoTuning, setIsAutoTuning] = useState(false);
 
@@ -183,6 +206,8 @@ const App: React.FC = () => {
             mirror={mirror}
             setMirror={setMirror}
             resetTransform={resetTransform}
+            transform={transform}
+            setTransform={setTransform}
           />
         )}
 
@@ -248,14 +273,14 @@ const App: React.FC = () => {
 
               {/* Preview Mode (When camera is off) */}
               {!showCamera && (
-                <div className="absolute inset-0 flex items-center justify-center bg-cream/10 p-8 no-flicker">
-                  {sketchCanvas && (
-                    <img
-                      src={sketchCanvas.toDataURL()}
-                      className="max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)]"
-                      alt="Sketch Preview"
-                    />
-                  )}
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-cream/10 p-8 no-flicker transition-opacity duration-300"
+                  style={{ opacity }}
+                >
+                  <SketchPreview
+                    sketchCanvas={sketchCanvas}
+                    mirror={mirror}
+                  />
                 </div>
               )}
             </>
