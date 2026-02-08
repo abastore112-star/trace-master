@@ -18,11 +18,8 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
 
   useEffect(() => {
     let stream: MediaStream | null = null;
-
     const startCamera = async () => {
-      // Don't restart if we already have a live track
-      if (videoTrack && videoTrack.readyState === 'live') return;
-
+      // Fallback constraints for better device compatibility
       const constraintSets = [
         { video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } } },
         { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } },
@@ -35,28 +32,14 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
           stream = await navigator.mediaDevices.getUserMedia({ ...constraints, audio: false });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            // Explicitly set muted and playsInline via JS for extra browser compatibility
-            videoRef.current.muted = true;
-            videoRef.current.setAttribute('playsinline', 'true');
-
-            // Wait for metadata before playing
-            await new Promise((resolve) => {
-              if (videoRef.current) videoRef.current.onloadedmetadata = resolve;
-              else resolve(null);
-            });
-
+            // Explicit play for mobile stability
             await videoRef.current.play();
             const track = stream.getVideoTracks()[0];
             setVideoTrack(track);
-            setError(null);
-            break;
+            break; // Success
           }
-        } catch (err: any) {
-          console.warn(`Constraint set failed (${err.name}):`, constraints);
-          // If the source is busy (e.g. from a previous unmount that hasn't cleared), wait 500ms
-          if (err.name === 'NotReadableError' || err.name === 'SourceUnavailableError') {
-            await new Promise(r => setTimeout(r, 500));
-          }
+        } catch (err) {
+          console.warn(`Constraint set failed, trying next...`, constraints);
         }
       }
 
@@ -64,12 +47,9 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
         setError("Optical sensor access required. Please check permissions.");
       }
     };
-
     startCamera();
-    return () => {
-      if (stream) stream.getTracks().forEach(t => t.stop());
-    };
-  }, [videoTrack]); // Re-run if track dies
+    return () => stream?.getTracks().forEach(t => t.stop());
+  }, []);
 
   // Sync sketch to projection canvas for high performance
   useEffect(() => {
