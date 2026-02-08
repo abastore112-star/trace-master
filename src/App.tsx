@@ -173,6 +173,19 @@ const App: React.FC = () => {
           isLocked={isLocked}
         />
 
+        {!isLocked && (showCamera || view === 'studio') && (
+          <HUD
+            settings={settings}
+            setSettings={setSettings}
+            originalBase64={originalBase64}
+            setIsLocked={setIsLocked}
+            nudge={nudge}
+            mirror={mirror}
+            setMirror={setMirror}
+            resetTransform={resetTransform}
+          />
+        )}
+
         {isLocked && (
           <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 pointer-events-auto z-[1001]">
             <div className="flex items-center gap-3 px-6 py-3 silk-panel rounded-full text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">
@@ -246,19 +259,6 @@ const App: React.FC = () => {
                 </div>
               )}
             </>
-          )}
-
-          {(showCamera || isLocked) && (
-            <HUD
-              settings={settings}
-              setSettings={setSettings}
-              originalBase64={originalBase64}
-              setIsLocked={setIsLocked}
-              nudge={nudge}
-              mirror={mirror}
-              setMirror={setMirror}
-              resetTransform={resetTransform}
-            />
           )}
         </div>
 
