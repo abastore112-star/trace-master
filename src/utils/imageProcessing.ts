@@ -9,50 +9,60 @@ export const analyzeImageForPresets = (image: HTMLImageElement): Partial<Process
   const ctx = canvas.getContext('2d');
   if (!ctx) return { threshold: 45, edgeStrength: 40 };
 
-  // Small sample for performance
-  canvas.width = 100;
-  canvas.height = 100;
-  ctx.drawImage(image, 0, 0, 100, 100);
+  canvas.width = 120;
+  canvas.height = 120;
+  ctx.drawImage(image, 0, 0, 120, 120);
 
-  const data = ctx.getImageData(0, 0, 100, 100).data;
-  let totalLuminance = 0;
+  const data = ctx.getImageData(0, 0, 120, 120).data;
+  let totalLum = 0;
   let minLum = 255;
   let maxLum = 0;
+  const pixels = 120 * 120;
 
   for (let i = 0; i < data.length; i += 4) {
-    const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    totalLuminance += lum;
-    if (lum < minLum) minLum = lum;
-    if (lum > maxLum) maxLum = lum;
+    const l = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    totalLum += l;
+    if (l < minLum) minLum = l;
+    if (l > maxLum) maxLum = l;
   }
 
-  const avgLuminance = totalLuminance / (100 * 100);
-  const contrastRange = maxLum - minLum;
+  const avgLum = totalLum / pixels;
 
-  // Heuristics for "Smooth" lines:
-  // 1. High contrast images need a higher threshold to avoid "shouting" lines.
-  // 2. Darker images need lower threshold to find lines in shadows.
-  // 3. Busy images (high variance) need lower edge strength to avoid noise.
+  // Calculate variance to detect "sketchiness" vs "photo"
+  let variance = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const l = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    variance += Math.pow(l - avgLum, 2);
+  }
+  const stdDev = Math.sqrt(variance / pixels);
 
-  let suggestedThreshold = 40;
-  let suggestedEdgeStrength = 35;
+  // Heuristics:
+  // stdDev < 40: Likely a clean sketch or low-contrast line art.
+  // stdDev > 70: Likely a complex photograph.
 
-  if (contrastRange > 180) {
-    suggestedThreshold = 55; // High contrast, be more selective
-  } else if (contrastRange < 80) {
-    suggestedThreshold = 25; // Low contrast, be more sensitive
+  let suggestedThreshold = 45;
+  let suggestedEdgeStrength = 40;
+
+  if (stdDev < 40) {
+    // Clean sketch: Be sensitive to find thin lines
+    suggestedThreshold = 30;
+    suggestedEdgeStrength = 25;
+  } else if (stdDev > 75) {
+    // Busy photo: Be selective to avoid noise
+    suggestedThreshold = 65;
+    suggestedEdgeStrength = 55;
   }
 
-  if (avgLuminance < 100) {
-    suggestedThreshold -= 5; // Dark image
-  }
+  // Adjust for overall brightness
+  if (avgLum < 80) suggestedThreshold -= 10; // Dark image needs lower threshold
+  if (avgLum > 180) suggestedThreshold += 5; // Very bright image can handle higher
 
   return {
-    threshold: suggestedThreshold,
-    edgeStrength: suggestedEdgeStrength,
+    threshold: Math.max(10, Math.min(140, suggestedThreshold)),
+    edgeStrength: Math.max(10, Math.min(140, suggestedEdgeStrength)),
     contrast: 100,
     brightness: 100,
-    invert: false,
+    invert: avgLum < 100, // Auto-invert for dark images
     blend: 0
   };
 };

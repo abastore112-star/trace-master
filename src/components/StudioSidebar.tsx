@@ -30,6 +30,8 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
     transform, setTransform, palette, autoTuneManually, nudge,
     settings, setSettings
 }) => {
+    const [showAdvanced, setShowAdvanced] = React.useState(false);
+
     return (
         <aside
             className={`
@@ -55,23 +57,42 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                     <div className="space-y-10 animate-in fade-in duration-700">
                         <div className="flex justify-between items-center">
                             <h3 className="text-[11px] font-bold uppercase tracking-[0.4em] text-accent border-l-2 border-accent pl-4">Optical Dynamics</h3>
-                            <button
-                                onClick={autoTuneManually}
-                                className="flex items-center gap-2 px-4 py-2 bg-accent/20 rounded-full text-[9px] font-bold uppercase tracking-widest text-accent hover:bg-accent hover:text-sienna dark:hover:text-white transition-all glow-on-hover shadow-sm"
-                            >
-                                <Sparkles className="w-3.5 h-3.5" /> Optimize Vision
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowAdvanced(!showAdvanced)}
+                                    className={`px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-widest transition-all ${showAdvanced ? 'bg-accent text-sienna' : 'bg-sienna/10 text-sienna/60'}`}
+                                >
+                                    {showAdvanced ? 'Simple' : 'Advanced'}
+                                </button>
+                                <button
+                                    onClick={autoTuneManually}
+                                    className="flex items-center gap-2 px-4 py-2 bg-accent/20 rounded-full text-[9px] font-bold uppercase tracking-widest text-accent hover:bg-accent hover:text-sienna dark:hover:text-white transition-all glow-on-hover shadow-sm"
+                                >
+                                    <Sparkles className="w-3.5 h-3.5" /> Optimize Vision
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-10">
-                            <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
-                            <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
+                            {showAdvanced ? (
+                                <>
+                                    <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
+                                    <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
+                                </>
+                            ) : (
+                                <ControlSlider
+                                    label="Tracing Intensity"
+                                    value={options.threshold}
+                                    min={10} max={120}
+                                    onChange={(v: number) => setOptions(o => ({ ...o, threshold: v, edgeStrength: v - 5 }))}
+                                />
+                            )}
                             <ControlSlider label="Ghost Opacity" value={opacity} min={0} max={1} step={0.01} onChange={(v: number) => setOpacity(v)} />
                         </div>
 
                         <InspectorSection title="Lens Filters">
                             <div className="grid grid-cols-1 gap-4">
-                                <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>
+                                {showAdvanced && <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>}
                                 <OptionToggle active={mirror} onClick={() => setMirror(!mirror)}>Mirror Projection</OptionToggle>
                                 <OptionToggle active={settings.lockWake} onClick={() => setSettings((s: any) => ({ ...s, lockWake: !s.lockWake }))}>Prevent Sleep</OptionToggle>
                             </div>

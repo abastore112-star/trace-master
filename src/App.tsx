@@ -64,6 +64,24 @@ const App: React.FC = () => {
           setImage(img);
           setPalette(extractPalette(img));
           setIsAutoTuning(true);
+
+          // Adaptive Scaling & Centering
+          const screenWidth = window.innerWidth * 0.8; // 80% safety margin
+          const screenHeight = window.innerHeight * 0.8;
+          const imgWidth = img.naturalWidth;
+          const imgHeight = img.naturalHeight;
+
+          const scaleX = screenWidth / imgWidth;
+          const scaleY = screenHeight / imgHeight;
+          const initialScale = Math.min(scaleX, scaleY, 1.0); // Don't upsale by default
+
+          setTransform({
+            scale: parseFloat(initialScale.toFixed(2)),
+            x: 0,
+            y: 0,
+            rotation: 0
+          });
+
           const presets = analyzeImageForPresets(img);
           const finalOptions = { ...options, ...presets } as ProcessingOptions;
           setOptions(finalOptions);
