@@ -40,6 +40,7 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                 <button
                     onClick={toggleTheme}
                     className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full bg-sienna/5 hover:bg-sienna/10 transition-all text-sienna/80 hover:text-accent border border-sienna/10"
+                    title="Toggle Theme"
                 >
                     {theme === 'light' ? <Moon className="w-4 h-4 lg:w-5 lg:h-5" /> : <Sun className="w-4 h-4 lg:w-5 lg:h-5" />}
                 </button>
@@ -49,11 +50,11 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                 {image && (
                     <button
                         onClick={() => setShowCamera(!showCamera)}
-                        className={`px-6 lg:px-10 h-12 lg:h-14 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all flex items-center gap-3 shadow-xl ${showCamera ? 'bg-accent text-sienna dark:text-white' : 'bg-sienna text-cream'}`}
+                        className={`px-6 lg:px-10 h-12 lg:h-14 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all flex items-center gap-3 shadow-xl active:scale-95 ${showCamera ? 'bg-accent text-sienna dark:text-white glow-on-hover' : 'bg-sienna text-cream'}`}
                     >
                         {showCamera ? <X className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-                        <span className="hidden sm:inline">{showCamera ? 'End Trace' : 'Open Lens'}</span>
-                        <span className="sm:hidden">{showCamera ? 'X' : 'AR'}</span>
+                        <span className="hidden sm:inline">{showCamera ? 'Cease Projection' : 'Launch Lens'}</span>
+                        <span className="sm:hidden">{showCamera ? 'Close' : 'AR'}</span>
                     </button>
                 )}
 

@@ -1,5 +1,5 @@
 
-import { ProcessingOptions } from "../types";
+import { ProcessingOptions } from "../types/types";
 
 /**
  * Samples the image to determine optimal starting parameters
@@ -13,7 +13,7 @@ export const analyzeImageForPresets = (image: HTMLImageElement): Partial<Process
   canvas.width = 100;
   canvas.height = 100;
   ctx.drawImage(image, 0, 0, 100, 100);
-  
+
   const data = ctx.getImageData(0, 0, 100, 100).data;
   let totalLuminance = 0;
   let minLum = 255;
@@ -33,7 +33,7 @@ export const analyzeImageForPresets = (image: HTMLImageElement): Partial<Process
   // 1. High contrast images need a higher threshold to avoid "shouting" lines.
   // 2. Darker images need lower threshold to find lines in shadows.
   // 3. Busy images (high variance) need lower edge strength to avoid noise.
-  
+
   let suggestedThreshold = 40;
   let suggestedEdgeStrength = 35;
 
@@ -61,14 +61,14 @@ export const extractPalette = (image: HTMLImageElement): string[] => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return [];
-  
+
   canvas.width = 50;
   canvas.height = 50;
   ctx.drawImage(image, 0, 0, 50, 50);
-  
+
   const data = ctx.getImageData(0, 0, 50, 50).data;
   const colors = new Set<string>();
-  
+
   for (let i = 0; i < data.length; i += 40) { // Sample points
     const r = data[i];
     const g = data[i + 1];
@@ -77,7 +77,7 @@ export const extractPalette = (image: HTMLImageElement): string[] => {
     colors.add(hex);
     if (colors.size >= 8) break;
   }
-  
+
   return Array.from(colors);
 };
 
@@ -89,14 +89,25 @@ export const applyFilters = (
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return;
 
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  
+  // Resolution capping for performance (Max 1920px)
+  const MAX_DIM = 1920;
+  let width = image.naturalWidth;
+  let height = image.naturalHeight;
+
+  if (width > MAX_DIM || height > MAX_DIM) {
+    const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+
   // Clear and draw with base adjustments
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.filter = `brightness(${options.brightness}%) contrast(${options.contrast}%)`;
   ctx.drawImage(image, 0, 0);
-  
+
   if (options.blend < 1) {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
@@ -127,7 +138,7 @@ export const applyFilters = (
     for (let i = 0; i < data.length; i += 4) {
       const edge = sobelData[i / 4];
       let lineVal = edge > options.threshold ? 0 : 255;
-      
+
       if (options.invert) lineVal = 255 - lineVal;
 
       const alpha = options.blend;

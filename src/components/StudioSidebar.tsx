@@ -59,7 +59,7 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                 onClick={autoTuneManually}
                                 className="flex items-center gap-2 px-4 py-2 bg-accent/20 rounded-full text-[9px] font-bold uppercase tracking-widest text-accent hover:bg-accent hover:text-sienna dark:hover:text-white transition-all glow-on-hover shadow-sm"
                             >
-                                <Sparkles className="w-3.5 h-3.5" /> Auto-Tune
+                                <Sparkles className="w-3.5 h-3.5" /> Optimize Vision
                             </button>
                         </div>
 
