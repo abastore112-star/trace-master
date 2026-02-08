@@ -126,34 +126,6 @@ const App: React.FC = () => {
     if (window.navigator.vibrate) window.navigator.vibrate([10, 20]);
   };
 
-  if (isLocked) {
-    return (
-      <div className="fixed inset-0 bg-black z-[1000] cursor-none overflow-hidden animate-in fade-in duration-700">
-        <CameraOverlay
-          sketchCanvas={sketchCanvas}
-          opacity={opacity}
-          mirror={mirror}
-          transform={transform}
-          settings={settings}
-        />
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 pointer-events-auto">
-          <div className="flex items-center gap-3 px-6 py-3 silk-panel rounded-full text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">
-            <Lock className="w-4 h-4" /> Locked Atelier
-          </div>
-          <button
-            onClick={() => {
-              setIsLocked(false);
-              if (window.navigator.vibrate) window.navigator.vibrate([20, 40, 20]);
-            }}
-            className="px-12 py-6 bg-cream/90 backdrop-blur-3xl border border-accent/20 text-sienna rounded-full font-bold text-[11px] uppercase tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center gap-4 hover:bg-cream"
-          >
-            <Unlock className="w-4 h-4" /> Return to Studio
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (view === 'landing') {
     return (
       <LandingPage
@@ -166,105 +138,138 @@ const App: React.FC = () => {
     );
   }
 
+  // Camera logic: Persistent and Global within the Studio/Locked context
+  const isCameraContext = view === 'studio' || isLocked;
+  const activeCamera = isCameraContext && (showCamera || isLocked);
+
   return (
     <div className="h-screen flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400">
-      <StudioHeader
-        theme={theme}
-        toggleTheme={toggleTheme}
-        onBack={() => setView('landing')}
-        showCamera={showCamera}
-        setShowCamera={setShowCamera}
-        image={image}
-        fileInputRef={fileInputRef}
-        handleFileUpload={handleFileUpload}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
-
-      <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
-        <div className="flex-1 relative silk-panel rounded-[2rem] lg:rounded-[4rem] overflow-hidden group bg-white/10 shadow-2xl">
-          {!image ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-10 animate-in zoom-in duration-1000">
-              <div className="w-24 h-24 lg:w-32 lg:h-32 bg-petal/40 rounded-full flex items-center justify-center float-anim shadow-lg shadow-accent/20">
-                <ImageIcon className="w-8 h-8 lg:w-12 lg:h-12 text-accent" />
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-2xl lg:text-4xl font-light italic">Waiting for vision.</h3>
-                <p className="text-[10px] lg:text-xs text-sienna/70 uppercase tracking-[0.4em]">The canvas awaits its digital ghost.</p>
-              </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-10 py-5 bg-accent text-sienna dark:text-white rounded-full text-[11px] font-bold uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-all"
-              >
-                Upload Your Art
-              </button>
-            </div>
-          ) : (
-            <>
-              {isAutoTuning && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-cream/70 backdrop-blur-xl animate-in fade-in duration-500">
-                  <div className="flex flex-col items-center gap-6">
-                    <Sparkles className="w-16 h-16 text-accent animate-bounce" />
-                    <span className="text-[11px] font-bold uppercase tracking-[0.6em] text-accent animate-pulse">Distilling Lines...</span>
-                  </div>
-                </div>
-              )}
-              {showCamera ? (
-                <CameraOverlay
-                  sketchCanvas={sketchCanvas} opacity={opacity} mirror={mirror} transform={transform} settings={settings}
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-cream/10 p-8 no-flicker">
-                  {sketchCanvas && (
-                    <img
-                      src={sketchCanvas.toDataURL()}
-                      className="max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)]"
-                      alt="Sketch Preview"
-                    />
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {showCamera && (
-            <HUD
-              settings={settings}
-              setSettings={setSettings}
-              originalBase64={originalBase64}
-              setIsLocked={setIsLocked}
-              nudge={nudge}
-            />
-          )}
-        </div>
-
-        <StudioSidebar
-          image={image}
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          options={options}
-          setOptions={setOptions}
+      {/* Global Persistent Camera Overlay */}
+      <div
+        className={`fixed inset-0 z-[10] transition-opacity duration-700 ${activeCamera ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      >
+        <CameraOverlay
+          sketchCanvas={sketchCanvas}
           opacity={opacity}
-          setOpacity={setOpacity}
           mirror={mirror}
-          setMirror={setMirror}
           transform={transform}
-          setTransform={setTransform}
-          palette={palette}
-          autoTuneManually={autoTuneManually}
-          nudge={nudge}
           settings={settings}
-          setSettings={setSettings}
         />
-
-        {isSidebarOpen && (
-          <div className="lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[65]" onClick={() => setIsSidebarOpen(false)} />
-        )}
       </div>
 
-      <canvas ref={hiddenCanvasRef} className="hidden" />
+      {isLocked ? (
+        <div className="fixed inset-0 z-[1000] cursor-none overflow-hidden animate-in fade-in duration-700 pointer-events-none">
+          {/* Overlay content stays above camera but below buttons */}
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 pointer-events-auto">
+            <div className="flex items-center gap-3 px-6 py-3 silk-panel rounded-full text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">
+              <Lock className="w-4 h-4" /> Locked Atelier
+            </div>
+            <button
+              onClick={() => {
+                setIsLocked(false);
+                if (window.navigator.vibrate) window.navigator.vibrate([20, 40, 20]);
+              }}
+              className="px-12 py-6 bg-cream/90 backdrop-blur-3xl border border-accent/20 text-sienna rounded-full font-bold text-[11px] uppercase tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center gap-4 hover:bg-cream"
+            >
+              <Unlock className="w-4 h-4" /> Return to Studio
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <StudioHeader
+            theme={theme}
+            toggleTheme={toggleTheme}
+            onBack={() => setView('landing')}
+            showCamera={showCamera}
+            setShowCamera={setShowCamera}
+            image={image}
+            fileInputRef={fileInputRef}
+            handleFileUpload={handleFileUpload}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+          />
+
+          <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
+            <div className={`flex-1 relative silk-panel rounded-[2rem] lg:rounded-[4rem] overflow-hidden group shadow-2xl transition-all duration-700 ${activeCamera ? 'bg-transparent border-transparent shadow-none' : 'bg-white/10'}`}>
+              {!image ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-10 animate-in zoom-in duration-1000">
+                  <div className="w-24 h-24 lg:w-32 lg:h-32 bg-petal/40 rounded-full flex items-center justify-center float-anim shadow-lg shadow-accent/20">
+                    <ImageIcon className="w-8 h-8 lg:w-12 lg:h-12 text-accent" />
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-2xl lg:text-4xl font-light italic">Waiting for vision.</h3>
+                    <p className="text-[10px] lg:text-xs text-sienna/70 uppercase tracking-[0.4em]">The canvas awaits its digital ghost.</p>
+                  </div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-10 py-5 bg-accent text-sienna dark:text-white rounded-full text-[11px] font-bold uppercase tracking-[0.3em] shadow-2xl hover:scale-105 transition-all"
+                  >
+                    Upload Your Art
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {isAutoTuning && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-cream/70 backdrop-blur-xl animate-in fade-in duration-500">
+                      <div className="flex flex-col items-center gap-6">
+                        <Sparkles className="w-16 h-16 text-accent animate-bounce" />
+                        <span className="text-[11px] font-bold uppercase tracking-[0.6em] text-accent animate-pulse">Distilling Lines...</span>
+                      </div>
+                    </div>
+                  )}
+                  {!activeCamera && sketchCanvas && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-cream/10 p-8 no-flicker">
+                      <img
+                        src={sketchCanvas.toDataURL()}
+                        className="max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)]"
+                        alt="Sketch Preview"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeCamera && (
+                <HUD
+                  settings={settings}
+                  setSettings={setSettings}
+                  originalBase64={originalBase64}
+                  setIsLocked={setIsLocked}
+                  nudge={nudge}
+                />
+              )}
+            </div>
+
+            <StudioSidebar
+              image={image}
+              isSidebarOpen={isSidebarOpen}
+              setIsSidebarOpen={setIsSidebarOpen}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              options={options}
+              setOptions={setOptions}
+              opacity={opacity}
+              setOpacity={setOpacity}
+              mirror={mirror}
+              setMirror={setMirror}
+              transform={transform}
+              setTransform={setTransform}
+              palette={palette}
+              autoTuneManually={autoTuneManually}
+              nudge={nudge}
+              settings={settings}
+              setSettings={setSettings}
+            />
+
+            {isSidebarOpen && (
+              <div className="lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[65]" onClick={() => setIsSidebarOpen(false)} />
+            )}
+          </div>
+
+          <canvas ref={hiddenCanvasRef} className="hidden" />
+        </>
+      )}
     </div>
   );
 };
