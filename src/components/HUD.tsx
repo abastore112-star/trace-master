@@ -1,7 +1,6 @@
 import React from 'react';
-import CameraOverlay from './CameraOverlay';
 import { HUDToggle, NudgeButton } from './UIPrimitives';
-import { Zap, ZapOff, Grid3X3, Image as ImageIcon, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Unlock, Lock } from 'lucide-react';
+import { Zap, ZapOff, Grid3X3, Image as ImageIcon, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, FlipHorizontal } from 'lucide-react';
 
 interface HUDProps {
     settings: any;
@@ -9,11 +8,18 @@ interface HUDProps {
     originalBase64: string;
     setIsLocked: (v: boolean) => void;
     nudge: (dx: number, dy: number) => void;
+    mirror: boolean;
+    setMirror: (v: boolean) => void;
+    resetTransform: () => void;
 }
 
-export const HUD: React.FC<HUDProps> = ({ settings, setSettings, originalBase64, setIsLocked, nudge }) => {
+export const HUD: React.FC<HUDProps> = ({
+    settings, setSettings, originalBase64, setIsLocked, nudge,
+    mirror, setMirror, resetTransform
+}) => {
     return (
-        <>
+        <div className="absolute inset-0 pointer-events-none p-6 lg:p-12">
+            {/* Left Top: Primary Optical Toggles */}
             <div className="absolute top-6 left-6 lg:top-12 lg:left-12 flex flex-col gap-3 lg:gap-4 pointer-events-auto">
                 <HUDToggle active={settings.torchOn} onClick={() => setSettings((s: any) => ({ ...s, torchOn: !s.torchOn }))}>
                     {settings.torchOn ? <Zap className="w-5 h-5" /> : <ZapOff className="w-5 h-5" />}
@@ -26,10 +32,30 @@ export const HUD: React.FC<HUDProps> = ({ settings, setSettings, originalBase64,
                 </HUDToggle>
             </div>
 
+            {/* Center Bottom: Precision Nudging */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-auto opacity-80 hover:opacity-100 transition-all duration-500">
+                <NudgeButton onClick={() => nudge(0, -5)}><ChevronUp /></NudgeButton>
+                <div className="flex gap-2">
+                    <NudgeButton onClick={() => nudge(-5, 0)}><ChevronLeft /></NudgeButton>
+                    <NudgeButton onClick={() => nudge(5, 0)}><ChevronRight /></NudgeButton>
+                </div>
+                <NudgeButton onClick={() => nudge(0, 5)}><ChevronDown /></NudgeButton>
+            </div>
+
+            {/* Right Side: Transform & Lock */}
+            <div className="absolute top-6 right-6 lg:top-12 lg:right-12 flex flex-col gap-3 lg:gap-4 pointer-events-auto">
+                <HUDToggle active={mirror} onClick={() => setMirror(!mirror)}>
+                    <FlipHorizontal className="w-5 h-5" />
+                </HUDToggle>
+                <HUDToggle active={false} onClick={resetTransform}>
+                    <RotateCcw className="w-5 h-5" />
+                </HUDToggle>
+            </div>
+
             <div className="absolute bottom-6 right-6 lg:bottom-12 lg:right-12 flex flex-col items-end gap-6 pointer-events-auto">
                 {settings.showReference && originalBase64 && (
                     <div className="w-32 h-32 lg:w-48 lg:h-48 silk-panel rounded-3xl overflow-hidden border-2 border-accent/40 animate-in slide-in-from-bottom duration-700 shadow-2xl">
-                        <img src={originalBase64} className="w-full h-full object-cover grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-opacity duration-700" />
+                        <img src={originalBase64} className="w-full h-full object-cover grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-opacity duration-700" alt="Reference" />
                     </div>
                 )}
                 <button
@@ -39,15 +65,6 @@ export const HUD: React.FC<HUDProps> = ({ settings, setSettings, originalBase64,
                     Lock Studio
                 </button>
             </div>
-
-            <div className="absolute bottom-6 left-6 lg:bottom-12 lg:left-12 flex flex-col items-center gap-2 opacity-80 hover:opacity-100 transition-all duration-500">
-                <NudgeButton onClick={() => nudge(0, -5)}><ChevronUp /></NudgeButton>
-                <div className="flex gap-2">
-                    <NudgeButton onClick={() => nudge(-5, 0)}><ChevronLeft /></NudgeButton>
-                    <NudgeButton onClick={() => nudge(5, 0)}><ChevronRight /></NudgeButton>
-                </div>
-                <NudgeButton onClick={() => nudge(0, 5)}><ChevronDown /></NudgeButton>
-            </div>
-        </>
+        </div>
     );
 };

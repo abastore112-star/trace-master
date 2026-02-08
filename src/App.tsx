@@ -112,6 +112,24 @@ const App: React.FC = () => {
     if (image) updateSketch(image, options);
   }, [image, options, updateSketch]);
 
+  const resetTransform = useCallback(() => {
+    if (!image) return;
+    const screenWidth = window.innerWidth * 0.8;
+    const screenHeight = window.innerHeight * 0.8;
+    const imgWidth = image.naturalWidth;
+    const imgHeight = image.naturalHeight;
+    const scaleX = screenWidth / imgWidth;
+    const scaleY = screenHeight / imgHeight;
+    const initialScale = Math.min(scaleX, scaleY, 1.0);
+    setTransform({
+      scale: parseFloat(initialScale.toFixed(2)),
+      x: 0,
+      y: 0,
+      rotation: 0
+    });
+    if (window.navigator.vibrate) window.navigator.vibrate(20);
+  }, [image]);
+
   const nudge = (dx: number, dy: number) => {
     setTransform(t => ({ ...t, x: t.x + dx, y: t.y + dy }));
     if (window.navigator.vibrate) window.navigator.vibrate(5);
@@ -125,6 +143,18 @@ const App: React.FC = () => {
     setTimeout(() => setIsAutoTuning(false), 1000);
     if (window.navigator.vibrate) window.navigator.vibrate([10, 20]);
   };
+
+  if (view === 'landing') {
+    return (
+      <LandingPage
+        onStart={() => setView('studio')}
+        onFileUpload={handleFileUpload}
+        fileInputRef={fileInputRef}
+        toggleTheme={toggleTheme}
+        theme={theme}
+      />
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400">
@@ -225,6 +255,9 @@ const App: React.FC = () => {
               originalBase64={originalBase64}
               setIsLocked={setIsLocked}
               nudge={nudge}
+              mirror={mirror}
+              setMirror={setMirror}
+              resetTransform={resetTransform}
             />
           )}
         </div>
@@ -259,37 +292,6 @@ const App: React.FC = () => {
     </div>
   );
 
-  <StudioSidebar
-    image={image}
-    isSidebarOpen={isSidebarOpen}
-    setIsSidebarOpen={setIsSidebarOpen}
-    activeTab={activeTab}
-    setActiveTab={setActiveTab}
-    options={options}
-    setOptions={setOptions}
-    opacity={opacity}
-    setOpacity={setOpacity}
-    mirror={mirror}
-    setMirror={setMirror}
-    transform={transform}
-    setTransform={setTransform}
-    palette={palette}
-    autoTuneManually={autoTuneManually}
-    nudge={nudge}
-    settings={settings}
-    setSettings={setSettings}
-  />
-
-  {
-    isSidebarOpen && (
-      <div className="lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[65]" onClick={() => setIsSidebarOpen(false)} />
-    )
-  }
-      </div >
-
-  <canvas ref={hiddenCanvasRef} className="hidden" />
-    </div >
-  );
 };
 
 export default App;
