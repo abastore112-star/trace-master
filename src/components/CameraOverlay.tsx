@@ -8,18 +8,21 @@ interface CameraOverlayProps {
   mirror: boolean;
   transform: TransformState;
   settings: AppSettings;
+  setTransform: React.Dispatch<React.SetStateAction<TransformState>>;
+  isLocked: boolean;
 }
 
-const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mirror, transform, settings }) => {
+const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mirror, transform, settings, setTransform, isLocked }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const projectionCanvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [videoTrack, setVideoTrack] = useState<MediaStreamTrack | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const lastPos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     let stream: MediaStream | null = null;
     const startCamera = async () => {
-      // Fallback constraints for better device compatibility
       const constraintSets = [
         { video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } } },
         { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } },
@@ -32,26 +35,22 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
           stream = await navigator.mediaDevices.getUserMedia({ ...constraints, audio: false });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            // Explicit play for mobile stability
             await videoRef.current.play();
             const track = stream.getVideoTracks()[0];
             setVideoTrack(track);
-            break; // Success
+            break;
           }
         } catch (err) {
-          console.warn(`Constraint set failed, trying next...`, constraints);
+          console.warn(`Constraint set failed`, constraints);
         }
       }
 
-      if (!stream) {
-        setError("Optical sensor access required. Please check permissions.");
-      }
+      if (!stream) setError("Lens initialization failed. check permissions.");
     };
     startCamera();
     return () => stream?.getTracks().forEach(t => t.stop());
   }, []);
 
-  // Sync sketch to projection canvas for high performance
   useEffect(() => {
     if (sketchCanvas && projectionCanvasRef.current) {
       const pCtx = projectionCanvasRef.current.getContext('2d');
@@ -72,8 +71,37 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
     }
   }, [settings.torchOn, videoTrack]);
 
+  // Gesture Handlers for Child-Simple Alignment
+  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isLocked) return;
+    setIsDragging(true);
+    const pos = 'touches' in e ? e.touches[0] : e;
+    lastPos.current = { x: pos.clientX, y: pos.clientY };
+  };
+
+  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging || isLocked) return;
+    const pos = 'touches' in e ? e.touches[0] : e;
+    const dx = pos.clientX - lastPos.current.x;
+    const dy = pos.clientY - lastPos.current.y;
+
+    setTransform(t => ({ ...t, x: t.x + dx, y: t.y + dy }));
+    lastPos.current = { x: pos.clientX, y: pos.clientY };
+  };
+
+  const handleEnd = () => setIsDragging(false);
+
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden no-flicker">
+    <div
+      className="relative w-full h-full bg-black overflow-hidden no-flicker touch-none select-none"
+      onMouseDown={handleStart}
+      onMouseMove={handleMove}
+      onMouseUp={handleEnd}
+      onMouseLeave={handleEnd}
+      onTouchStart={handleStart}
+      onTouchMove={handleMove}
+      onTouchEnd={handleEnd}
+    >
       {error ? (
         <div className="flex items-center justify-center h-full text-white/40 p-10 text-center font-light italic">{error}</div>
       ) : (
@@ -81,7 +109,7 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
           <video
             ref={videoRef}
             autoPlay playsInline muted
-            className={`w-full h-full object-cover opacity-80 ${mirror ? 'scale-x-[-1]' : ''}`}
+            className={`w-full h-full object-cover opacity-80 pointer-events-none ${mirror ? 'scale-x-[-1]' : ''}`}
             style={{ filter: 'contrast(1.1) brightness(0.9)' }}
           />
 
@@ -98,7 +126,7 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
 
           {sketchCanvas && (
             <div
-              className="absolute inset-0 pointer-events-none flex items-center justify-center no-flicker"
+              className={`absolute inset-0 pointer-events-none flex items-center justify-center no-flicker transition-transform duration-75 ${isDragging ? 'scale-[1.02]' : ''}`}
               style={{
                 opacity,
                 transform: `
@@ -107,7 +135,6 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
                   rotate(${transform.rotation}deg)
                   ${mirror ? 'scaleX(-1)' : ''}
                 `,
-                transition: 'none',
                 willChange: 'transform, opacity'
               }}
             >
@@ -116,6 +143,13 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
                 className="max-w-none w-auto h-auto drop-shadow-[0_20px_60px_rgba(255,94,126,0.3)]"
                 style={{ imageRendering: 'auto' }}
               />
+
+              {/* Direct feedback guide for kids */}
+              {!isLocked && !isDragging && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-accent/80 text-white rounded-full text-[8px] font-bold uppercase tracking-widest animate-bounce opacity-40">
+                  Touch to Align
+                </div>
+              )}
             </div>
           )}
 

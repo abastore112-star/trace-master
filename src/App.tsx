@@ -126,48 +126,41 @@ const App: React.FC = () => {
     if (window.navigator.vibrate) window.navigator.vibrate([10, 20]);
   };
 
-  if (isLocked) {
-    return (
-      <div className="fixed inset-0 bg-black z-[1000] cursor-none overflow-hidden animate-in fade-in duration-700">
+  return (
+    <div className="h-screen flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400">
+      {/* Persistent Camera Overlay - Never unmounts to prevent source errors */}
+      <div
+        className={`fixed inset-0 transition-opacity duration-700 ${isLocked ? 'z-[1000] opacity-100' : (showCamera && view === 'studio' ? 'z-10 opacity-100' : 'z-[-1] opacity-0 pointer-events-none')}`}
+        style={{ pointerEvents: isLocked || (showCamera && view === 'studio') ? 'auto' : 'none' }}
+      >
         <CameraOverlay
           sketchCanvas={sketchCanvas}
           opacity={opacity}
           mirror={mirror}
           transform={transform}
           settings={settings}
+          setTransform={setTransform}
+          isLocked={isLocked}
         />
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 pointer-events-auto">
-          <div className="flex items-center gap-3 px-6 py-3 silk-panel rounded-full text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">
-            <Lock className="w-4 h-4" /> Locked Atelier
+
+        {isLocked && (
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 pointer-events-auto z-[1001]">
+            <div className="flex items-center gap-3 px-6 py-3 silk-panel rounded-full text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">
+              <Lock className="w-4 h-4" /> Locked Atelier
+            </div>
+            <button
+              onClick={() => {
+                setIsLocked(false);
+                if (window.navigator.vibrate) window.navigator.vibrate([20, 40, 20]);
+              }}
+              className="px-12 py-6 bg-cream/90 backdrop-blur-3xl border border-accent/20 text-sienna rounded-full font-bold text-[11px] uppercase tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center gap-4 hover:bg-cream"
+            >
+              <Unlock className="w-4 h-4" /> Return to Studio
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setIsLocked(false);
-              if (window.navigator.vibrate) window.navigator.vibrate([20, 40, 20]);
-            }}
-            className="px-12 py-6 bg-cream/90 backdrop-blur-3xl border border-accent/20 text-sienna rounded-full font-bold text-[11px] uppercase tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center gap-4 hover:bg-cream"
-          >
-            <Unlock className="w-4 h-4" /> Return to Studio
-          </button>
-        </div>
+        )}
       </div>
-    );
-  }
 
-  if (view === 'landing') {
-    return (
-      <LandingPage
-        onStart={() => setView('studio')}
-        onFileUpload={handleFileUpload}
-        fileInputRef={fileInputRef}
-        toggleTheme={toggleTheme}
-        theme={theme}
-      />
-    );
-  }
-
-  return (
-    <div className="h-screen flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400">
       <StudioHeader
         theme={theme}
         toggleTheme={toggleTheme}
@@ -209,11 +202,9 @@ const App: React.FC = () => {
                   </div>
                 </div>
               )}
-              {showCamera ? (
-                <CameraOverlay
-                  sketchCanvas={sketchCanvas} opacity={opacity} mirror={mirror} transform={transform} settings={settings}
-                />
-              ) : (
+
+              {/* Preview Mode (When camera is off) */}
+              {!showCamera && (
                 <div className="absolute inset-0 flex items-center justify-center bg-cream/10 p-8 no-flicker">
                   {sketchCanvas && (
                     <img
@@ -227,7 +218,7 @@ const App: React.FC = () => {
             </>
           )}
 
-          {showCamera && (
+          {(showCamera || isLocked) && (
             <HUD
               settings={settings}
               setSettings={setSettings}
@@ -266,6 +257,38 @@ const App: React.FC = () => {
 
       <canvas ref={hiddenCanvasRef} className="hidden" />
     </div>
+  );
+
+  <StudioSidebar
+    image={image}
+    isSidebarOpen={isSidebarOpen}
+    setIsSidebarOpen={setIsSidebarOpen}
+    activeTab={activeTab}
+    setActiveTab={setActiveTab}
+    options={options}
+    setOptions={setOptions}
+    opacity={opacity}
+    setOpacity={setOpacity}
+    mirror={mirror}
+    setMirror={setMirror}
+    transform={transform}
+    setTransform={setTransform}
+    palette={palette}
+    autoTuneManually={autoTuneManually}
+    nudge={nudge}
+    settings={settings}
+    setSettings={setSettings}
+  />
+
+  {
+    isSidebarOpen && (
+      <div className="lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[65]" onClick={() => setIsSidebarOpen(false)} />
+    )
+  }
+      </div >
+
+  <canvas ref={hiddenCanvasRef} className="hidden" />
+    </div >
   );
 };
 
