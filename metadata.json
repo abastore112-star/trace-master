@@ -1,0 +1,7 @@
+{
+  "name": "TraceMaster AR",
+  "description": "Transform any photo into a traceable sketch with AR camera overlays, color guides, and AI-powered artistic tips for physical drawing.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

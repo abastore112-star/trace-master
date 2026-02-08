@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+    --color-cream: #FDFBF7;
+    --color-petal: #F9D8D6;
+    --color-sienna: #3D3030;
+    --color-accent: #E8A8A8;
+
+    --color-glass: rgba(255, 255, 255, 0.85);
+    --color-border: rgba(61, 48, 48, 0.2);
+    --color-track: rgba(61, 48, 48, 0.2);
+}
+
+@layer base {
+    .dark {
+        --color-cream: #0A0A0B;
+        --color-petal: #1A1A1D;
+        --color-sienna: #EAEAEA;
+        --color-accent: #FF5E7E;
+        --color-glass: rgba(20, 20, 22, 0.85);
+        --color-border: rgba(255, 94, 126, 0.3);
+        --color-track: rgba(255, 255, 255, 0.15);
+    }
+
+    body {
+        @apply bg-cream text-sienna overflow-x-hidden transition-colors duration-500;
+    }
+}
+
+@layer components {
+    .silk-panel {
+        background: var(--glass);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border);
+        @apply transition-all duration-300;
+    }
+
+    .aura-bg {
+        @apply fixed inset-0 -z-10 opacity-40 transition-opacity duration-1000;
+        background: radial-gradient(circle at 80% 20%, var(--petal) 0%, transparent 40%),
+            radial-gradient(circle at 10% 90%, var(--border) 0%, transparent 50%);
+    }
+
+    .no-flicker {
+        backface-visibility: hidden;
+        transform: translateZ(0);
+        @apply transition-all duration-300;
+    }
+
+    .reveal {
+        @apply opacity-0 translate-y-8 transition-all duration-700 ease-out;
+    }
+
+    .reveal.active {
+        @apply opacity-100 translate-y-0;
+    }
+
+    input[type=range] {
+        -webkit-appearance: none;
+        @apply bg-transparent w-full cursor-pointer;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+        @apply w-full h-1.5 rounded-full;
+        background: var(--track);
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        @apply h-5 w-5 rounded-full bg-accent border-[3px] border-cream shadow-md transition-transform duration-200;
+        margin-top: -7px;
+    }
+
+    .dark input[type=range]::-webkit-slider-thumb {
+        @apply shadow-[0_0_12px_var(--accent)];
+    }
+
+    input[type=range]:active::-webkit-slider-thumb {
+        @apply scale-125;
+    }
+
+    .float-anim {
+        animation: floating 8s ease-in-out infinite;
+    }
+}
+
+@keyframes floating {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-cream;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-accent rounded-full opacity-50;
+}
