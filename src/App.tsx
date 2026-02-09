@@ -8,6 +8,7 @@ import { HUD } from './components/HUD';
 import { applyFilters, extractPalette, analyzeImageForPresets } from './utils/imageProcessing';
 import { ProcessingOptions, TransformState, AppSettings } from './types/types';
 import { useTheme } from './utils/useTheme';
+import { getDeviceTier, getTierScale, DeviceInfo } from './utils/deviceInfo';
 
 const SketchPreview: React.FC<{ sketchCanvas: HTMLCanvasElement | null, mirror: boolean }> = ({ sketchCanvas, mirror }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -71,6 +72,9 @@ const App: React.FC = () => {
     showReference: false,
     lockWake: true
   });
+
+  const [deviceInfo] = useState<DeviceInfo>(getDeviceTier());
+  const tierScale = getTierScale(deviceInfo.tier);
 
   const [uiVisible, setUiVisible] = useState(true);
   const uiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -156,7 +160,7 @@ const App: React.FC = () => {
 
     // Preparation pass (Brightness/Contrast and Scaling) on main thread
     // This is fast enough as it uses native browser filters
-    const MAX_DIM = 1280;
+    const MAX_DIM = tierScale.maxDim;
     let w = img.naturalWidth;
     let h = img.naturalHeight;
     if (w > MAX_DIM || h > MAX_DIM) {
@@ -210,9 +214,15 @@ const App: React.FC = () => {
     if (isProcessingRef.current) {
       nextUpdateRef.current = { img, opts };
     } else {
-      processWorkerRequest(img, opts);
+      // Add tier-based debounce to prevent saturating low-end CPUs
+      const debounce = tierScale.workerDebounce;
+      if (debounce > 0) {
+        setTimeout(() => processWorkerRequest(img, opts), debounce);
+      } else {
+        processWorkerRequest(img, opts);
+      }
     }
-  }, [processWorkerRequest]);
+  }, [processWorkerRequest, tierScale.workerDebounce]);
 
   useEffect(() => {
     if (image) updateSketch(image, options);
@@ -285,6 +295,7 @@ const App: React.FC = () => {
           settings={settings}
           setTransform={setTransform}
           isLocked={isLocked}
+          deviceTier={deviceInfo.tier}
         />
 
         {!isLocked && (showCamera || view === 'studio') && (
@@ -403,6 +414,7 @@ const App: React.FC = () => {
           nudge={nudge}
           settings={settings}
           setSettings={setSettings}
+          deviceTier={deviceInfo.tier}
           visible={uiVisible}
         />
 

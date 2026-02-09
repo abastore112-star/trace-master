@@ -8,11 +8,12 @@ interface CameraOverlayProps {
   mirror: boolean;
   transform: TransformState;
   settings: AppSettings;
+  deviceTier: 'LOW' | 'MID' | 'HIGH';
   setTransform: React.Dispatch<React.SetStateAction<TransformState>>;
   isLocked: boolean;
 }
 
-const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mirror, transform, settings, setTransform, isLocked }) => {
+const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mirror, transform, settings, deviceTier, setTransform, isLocked }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const projectionCanvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,7 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
 
     // Comprehensive constraint fallback sequence
     const constraintSets = [
-      { video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } } }, // 4K
+      ...(deviceTier === 'HIGH' ? [{ video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } } }] : []), // 4K Only for HIGH
       { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } }, // 1080p
       { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },  // 720p
       { video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } },   // 480p
@@ -195,7 +196,7 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
             ref={videoRef}
             autoPlay playsInline muted
             className={`w-full h-full object-cover opacity-80 pointer-events-none ${mirror ? 'scale-x-[-1]' : ''}`}
-            style={{ filter: 'contrast(1.1) brightness(0.9)' }}
+            style={{ filter: deviceTier === 'LOW' ? 'none' : 'contrast(1.1) brightness(0.9)' }}
           />
 
           {settings.showGrid && (

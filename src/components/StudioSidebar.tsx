@@ -22,6 +22,7 @@ interface StudioSidebarProps {
     nudge: (dx: number, dy: number) => void;
     settings: { lockWake: boolean };
     setSettings: any;
+    deviceTier: 'LOW' | 'MID' | 'HIGH';
     visible: boolean;
 }
 
@@ -29,7 +30,7 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
     image, isSidebarOpen, setIsSidebarOpen, activeTab, setActiveTab,
     options, setOptions, opacity, setOpacity, mirror, setMirror,
     transform, setTransform, palette, autoTuneManually, nudge,
-    settings, setSettings, visible
+    settings, setSettings, deviceTier, visible
 }) => {
     const [showAdvanced, setShowAdvanced] = React.useState(false);
 
