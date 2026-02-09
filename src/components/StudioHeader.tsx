@@ -135,13 +135,15 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                     </div>
                 )}
 
-                {/* Sidebar Toggle - Only on Mobile */}
-                <button
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className={`lg:hidden w-10 h-10 flex items-center justify-center rounded-full border transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white border-accent shadow-lg shadow-accent/20' : 'bg-white/40 shadow-sm border-sienna/20'}`}
-                >
-                    <Sliders className="w-4 h-4" />
-                </button>
+                {/* Sidebar Toggle - Only on Mobile Studio (Hidden in AR) */}
+                {!showCamera && (
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className={`lg:hidden w-10 h-10 flex items-center justify-center rounded-full border transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white border-accent shadow-lg shadow-accent/20' : 'bg-white/40 shadow-sm border-sienna/20'}`}
+                    >
+                        <Sliders className="w-4 h-4" />
+                    </button>
+                )}
             </div>
         </nav>
     );
