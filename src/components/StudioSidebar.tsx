@@ -39,8 +39,8 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
         fixed lg:static inset-x-0 bottom-0 lg:inset-auto
         lg:w-[420px] lg:flex flex-col gap-8 shrink-0 
         transition-all duration-700 ease-out z-[1070]
-        bg-transparent
-        ${isSidebarOpen ? 'translate-y-0 h-[85vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
+        bg-white/40 lg:bg-transparent backdrop-blur-3xl lg:backdrop-blur-none
+        ${isSidebarOpen ? 'translate-y-0 h-[45vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
         ${visible ? 'lg:opacity-100' : 'opacity-0 pointer-events-none translate-y-20 lg:translate-y-0'}
         p-8 lg:p-0 rounded-t-[4rem] lg:rounded-none lg:shadow-none
         ${!image ? 'lg:opacity-10 lg:pointer-events-none' : ''}
@@ -61,14 +61,13 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
             <div className="flex-1 overflow-y-auto pr-2 space-y-12 scroll-smooth custom-scrollbar pb-10">
                 {activeTab === 'lens' && (
                     <div className="space-y-10 animate-in fade-in duration-700 silk-panel p-6 rounded-[3rem] border border-sienna/10 backdrop-blur-2xl">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-[11px] font-bold uppercase tracking-[0.4em] text-accent border-l-2 border-accent pl-4">Optical Dynamics</h3>
-                            <div className="flex gap-2">
+                        <div className="flex justify-between items-center px-2">
+                            <div className="flex gap-2 w-full justify-between">
                                 <button
                                     onClick={() => setShowAdvanced(!showAdvanced)}
-                                    className={`px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-widest transition-all ${showAdvanced ? 'bg-accent text-sienna' : 'bg-sienna/10 text-sienna/60'}`}
+                                    className={`px-4 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${showAdvanced ? 'bg-accent text-sienna shadow-lg' : 'bg-sienna/10 text-sienna/60'}`}
                                 >
-                                    {showAdvanced ? 'Simple' : 'Advanced'}
+                                    {showAdvanced ? 'Simple Mode' : 'Advanced Tuning'}
                                 </button>
                                 <button
                                     onClick={autoTuneManually}
@@ -79,24 +78,32 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                             </div>
                         </div>
 
-                        <div className="space-y-10">
-                            {showAdvanced ? (
-                                <>
-                                    <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
-                                    <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
-                                </>
-                            ) : (
-                                <ControlSlider
-                                    label="Tracing Intensity"
-                                    value={options.threshold}
-                                    min={10} max={120}
-                                    onChange={(v: number) => setOptions(o => ({ ...o, threshold: v, edgeStrength: v - 5 }))}
-                                />
-                            )}
-                            <ControlSlider label="Ghost Opacity" value={opacity} min={0} max={1} step={0.01} onChange={(v: number) => setOpacity(v)} />
-                        </div>
+                        <InspectorSection
+                            title="Lens Refinement"
+                            info="Adjusts the edge detection and line weight of your reference image. Threshold controls the line density - lower values capture more ghost-like details."
+                        >
+                            <div className="space-y-10">
+                                {showAdvanced ? (
+                                    <>
+                                        <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
+                                        <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
+                                    </>
+                                ) : (
+                                    <ControlSlider
+                                        label="Tracing Intensity"
+                                        value={options.threshold}
+                                        min={10} max={120}
+                                        onChange={(v: number) => setOptions(o => ({ ...o, threshold: v, edgeStrength: v - 5 }))}
+                                    />
+                                )}
+                                <ControlSlider label="Ghost Opacity" value={opacity} min={0} max={1} step={0.01} onChange={(v: number) => setOpacity(v)} />
+                            </div>
+                        </InspectorSection>
 
-                        <InspectorSection title="Lens Filters">
+                        <InspectorSection
+                            title="Control Panel"
+                            info="Core visibility and spatial controls. Mirrors your projection for hand-specific tracing or toggles a professional alignment grid."
+                        >
                             <div className="grid grid-cols-1 gap-4">
                                 {showAdvanced && <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>}
                                 <OptionToggle active={mirror} onClick={() => setMirror(!mirror)}>Mirror Projection</OptionToggle>
@@ -107,10 +114,13 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                 )}
 
                 {activeTab === 'palette' && (
-                    <div className="space-y-10 animate-in fade-in duration-700 silk-panel p-6 lg:p-10 rounded-[3rem] border border-sienna/10 backdrop-blur-2xl">
-                        <InspectorSection title="Pigment Extraction">
-                            <p className="text-[12px] text-sienna/70 font-light italic leading-relaxed mb-8">Sampled hues from your vision to aid physical paint mixing and selection.</p>
-                            <div className="grid grid-cols-4 gap-4">
+                    <div className="space-y-10 animate-in fade-in duration-700 silk-panel p-6 rounded-[3rem] border border-sienna/10 backdrop-blur-2xl">
+                        <InspectorSection
+                            title="Pigment Extraction"
+                            info="Analyzes your reference art to extract the most prominent brand colors and pigment values for physical mixing."
+                        >
+                            <p className="text-[12px] text-sienna/70 font-light italic leading-relaxed mb-8 px-2 text-center">Sampled hues from your vision to aid physical paint mixing and selection.</p>
+                            <div className="grid grid-cols-4 gap-4 px-2 pb-4">
                                 {palette.map((c, i) => (
                                     <div key={i} className="group relative">
                                         <div

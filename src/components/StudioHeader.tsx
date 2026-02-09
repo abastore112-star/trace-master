@@ -11,7 +11,7 @@ import {
     Grid3X3,
     FlipHorizontal,
     RefreshCw,
-    Maximize
+    Sliders
 } from 'lucide-react';
 
 interface StudioHeaderProps {
@@ -103,6 +103,8 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                     </div>
                 )}
 
+                {/* Header Toggle logic continues below */}
+
                 {/* Transparent Tools Dropdown */}
                 {isToolsOpen && showCamera && (
                     <div className="absolute top-full right-0 mt-4 p-2 silk-panel rounded-3xl border border-sienna/10 shadow-2xl flex flex-col gap-1 animate-in slide-in-from-top-4 duration-300 min-w-[140px]">
@@ -136,9 +138,9 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                 {/* Sidebar Toggle - Only on Mobile */}
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className={`lg:hidden w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full border transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white border-accent' : 'bg-white/40 shadow-sm border-sienna/20'}`}
+                    className={`lg:hidden w-10 h-10 flex items-center justify-center rounded-full border transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white border-accent shadow-lg shadow-accent/20' : 'bg-white/40 shadow-sm border-sienna/20'}`}
                 >
-                    <Maximize className="w-4 h-4" />
+                    <Sliders className="w-4 h-4" />
                 </button>
             </div>
         </nav>

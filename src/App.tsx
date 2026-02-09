@@ -250,18 +250,16 @@ const App: React.FC = () => {
         )}
 
         {isLocked && (
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 pointer-events-auto z-[1001]">
-            <div className="flex items-center gap-3 px-6 py-3 silk-panel rounded-full text-[10px] font-bold uppercase tracking-[0.4em] text-accent animate-pulse">
-              <Lock className="w-4 h-4" /> Locked Atelier
-            </div>
+          <div className="absolute bottom-8 right-8 pointer-events-auto z-[1001] animate-in fade-in zoom-in duration-500">
             <button
               onClick={() => {
                 setIsLocked(false);
                 if (window.navigator.vibrate) window.navigator.vibrate([20, 40, 20]);
               }}
-              className="px-12 py-6 bg-cream/90 backdrop-blur-3xl border border-accent/20 text-sienna rounded-full font-bold text-[11px] uppercase tracking-[0.4em] shadow-2xl active:scale-95 transition-all flex items-center gap-4 hover:bg-cream"
+              className="w-14 h-14 bg-white/40 backdrop-blur-3xl border border-white/20 text-sienna rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all hover:bg-white/60 group"
+              title="Unlock Workspace"
             >
-              <Unlock className="w-4 h-4" /> Return to Studio
+              <Unlock className="w-5 h-5 transition-transform group-hover:rotate-12" />
             </button>
           </div>
         )}
@@ -283,7 +281,7 @@ const App: React.FC = () => {
         mirror={mirror}
         setMirror={setMirror}
         retryCamera={retryCamera}
-        visible={uiVisible}
+        visible={showCamera ? uiVisible : true}
       />
 
       <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">

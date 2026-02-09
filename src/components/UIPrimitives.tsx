@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, HelpCircle } from 'lucide-react';
 
 export const TabButton = ({ active, onClick, children }: any) => (
     <button
@@ -10,9 +10,19 @@ export const TabButton = ({ active, onClick, children }: any) => (
     </button>
 );
 
-export const InspectorSection = ({ title, children }: any) => (
+export const InspectorSection = ({ title, info, children }: any) => (
     <div className="space-y-8">
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent border-l-2 border-accent pl-4">{title}</h3>
+        <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent border-l-2 border-accent pl-4">{title}</h3>
+            {info && (
+                <button
+                    onClick={() => alert(`${title}: ${info}`)}
+                    className="w-6 h-6 flex items-center justify-center rounded-full bg-sienna/5 text-sienna/40 hover:text-accent transition-all"
+                >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                </button>
+            )}
+        </div>
         <div className="space-y-8">{children}</div>
     </div>
 );

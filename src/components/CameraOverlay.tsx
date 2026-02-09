@@ -19,9 +19,15 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
   const [videoTrack, setVideoTrack] = useState<MediaStreamTrack | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Gesture State
+  const [isDragging, setIsDragging] = useState(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const lastDistance = useRef<number | null>(null);
+
   const startCamera = async () => {
     setError(null);
     let stream: MediaStream | null = null;
+    // ... rest of startCamera ...
 
     // Comprehensive constraint fallback sequence
     const constraintSets = [
@@ -98,9 +104,68 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
     }
   }, [settings.torchOn, videoTrack]);
 
+  // Gesture Logic
+  const getDistance = (t1: React.Touch, t2: React.Touch) => {
+    return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+  };
+
+  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isLocked) return;
+    setIsDragging(true);
+
+    if ('touches' in e) {
+      if (e.touches.length === 1) {
+        lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2) {
+        lastDistance.current = getDistance(e.touches[0], e.touches[1]);
+      }
+    } else {
+      lastPos.current = { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
+    }
+  };
+
+  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging || isLocked) return;
+
+    if ('touches' in e) {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const dx = touch.clientX - lastPos.current.x;
+        const dy = touch.clientY - lastPos.current.y;
+        setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+        lastPos.current = { x: touch.clientX, y: touch.clientY };
+      } else if (e.touches.length === 2) {
+        const dist = getDistance(e.touches[0], e.touches[1]);
+        if (lastDistance.current !== null) {
+          const delta = dist / lastDistance.current;
+          setTransform(prev => ({ ...prev, scale: Math.max(0.1, Math.min(10, prev.scale * delta)) }));
+        }
+        lastDistance.current = dist;
+      }
+    } else {
+      const mouse = e as React.MouseEvent;
+      const dx = mouse.clientX - lastPos.current.x;
+      const dy = mouse.clientY - lastPos.current.y;
+      setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+      lastPos.current = { x: mouse.clientX, y: mouse.clientY };
+    }
+  };
+
+  const handleEnd = () => {
+    setIsDragging(false);
+    lastDistance.current = null;
+  };
+
   return (
     <div
       className="relative w-full h-full bg-black overflow-hidden no-flicker touch-none select-none"
+      onMouseDown={handleStart}
+      onMouseMove={handleMove}
+      onMouseUp={handleEnd}
+      onMouseLeave={handleEnd}
+      onTouchStart={handleStart}
+      onTouchMove={handleMove}
+      onTouchEnd={handleEnd}
     >
       {error ? (
         <div className="flex items-center justify-center h-full text-white/40 p-10 text-center font-light italic">{error}</div>
@@ -126,7 +191,7 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
 
           {sketchCanvas && (
             <div
-              className="absolute inset-0 pointer-events-none flex items-center justify-center no-flicker transition-transform duration-75"
+              className={`absolute inset-0 pointer-events-none flex items-center justify-center no-flicker ${isDragging ? 'transition-none' : 'transition-transform duration-150'}`}
               style={{
                 opacity,
                 transform: `
