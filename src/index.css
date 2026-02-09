@@ -9,9 +9,18 @@
     --color-glass: rgba(255, 255, 255, 0.85);
     --color-border: rgba(61, 48, 48, 0.2);
     --color-track: rgba(61, 48, 48, 0.2);
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
 }
 
 @layer base {
+    :root {
+        --hdr-h: clamp(60px, 8vh, 80px);
+    }
+
     .dark {
         --color-cream: #0A0A0B;
         --color-petal: #1A1A1D;
@@ -24,6 +33,10 @@
 
     body {
         @apply bg-cream text-sienna overflow-x-hidden transition-colors duration-500;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
     }
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, ZapOff, Grid3X3, Image as ImageIcon, RotateCcw, FlipHorizontal, Plus, X, Lock, Maximize, Compass, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Zap, ZapOff, Grid3X3, Image as ImageIcon, RotateCcw, FlipHorizontal, Plus, Lock, Maximize, Compass, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
 interface HUDProps {
     settings: any;
@@ -12,11 +12,13 @@ interface HUDProps {
     resetTransform: () => void;
     transform: any;
     setTransform: any;
+    retryCamera: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
     settings, setSettings, originalBase64, setIsLocked, nudge,
-    mirror, setMirror, resetTransform, transform, setTransform
+    mirror, setMirror, resetTransform, transform, setTransform,
+    retryCamera
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -26,9 +28,17 @@ export const HUD: React.FC<HUDProps> = ({
     };
 
     return (
-        <div className="absolute inset-0 pointer-events-none p-6 lg:p-12 z-[1002]">
+        <div
+            className="absolute inset-0 pointer-events-none z-[1002]"
+            style={{
+                paddingTop: 'calc(var(--safe-top) + 1.5rem)',
+                paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)',
+                paddingLeft: 'calc(var(--safe-left) + 1.5rem)',
+                paddingRight: 'calc(var(--safe-right) + 1.5rem)',
+            }}
+        >
             {/* Top Right: Status & Quick Lock */}
-            <div className="absolute top-6 right-6 lg:top-12 lg:right-12 flex flex-col items-end gap-4 pointer-events-auto">
+            <div className="absolute top-[var(--safe-top)] right-[var(--safe-right)] mt-6 mr-6 lg:mt-12 lg:mr-12 flex flex-col items-end gap-4 pointer-events-auto">
                 <button
                     onClick={() => setIsLocked(true)}
                     className="flex items-center gap-2.5 px-5 py-2.5 bg-accent text-sienna dark:bg-white dark:text-sienna rounded-full font-bold text-[9px] uppercase tracking-[0.3em] shadow-lg hover:scale-105 active:scale-95 transition-all"
@@ -38,7 +48,13 @@ export const HUD: React.FC<HUDProps> = ({
             </div>
 
             {/* Bottom Right: Unified Action Bar (Horizontal Expansion) */}
-            <div className="absolute bottom-6 right-6 lg:bottom-12 lg:right-12 flex items-center justify-end gap-3 pointer-events-auto flex-row-reverse max-w-full">
+            <div
+                className="absolute flex items-center justify-end gap-3 pointer-events-auto flex-row-reverse max-w-[calc(100vw-3rem)] overflow-visible"
+                style={{
+                    bottom: 'calc(var(--safe-bottom) + 1.5rem)',
+                    right: 'calc(var(--safe-right) + 1.5rem)'
+                }}
+            >
                 {/* Main FAB Toggle */}
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
@@ -49,11 +65,11 @@ export const HUD: React.FC<HUDProps> = ({
                 </button>
 
                 {/* Expanded Tools Panel (Expands to Left) */}
-                <div className={`flex items-end gap-3 transition-all duration-500 origin-right pr-2
+                <div className={`flex items-end gap-2 lg:gap-3 transition-all duration-500 origin-right pr-2
                 ${isExpanded ? 'scale-100 opacity-100 translate-x-0' : 'scale-0 opacity-0 translate-x-20 pointer-events-none'}`}>
 
                     {/* Spatial Controls Popover (Compact Block) */}
-                    <div className="bg-white/95 dark:bg-[#12100e] backdrop-blur-3xl p-5 rounded-[2rem] border border-sienna/10 dark:border-white/5 shadow-2xl space-y-5 w-[140px] lg:w-[180px]">
+                    <div className="bg-white/95 dark:bg-[#12100e] backdrop-blur-3xl p-4 lg:p-5 rounded-[2rem] border border-sienna/10 dark:border-white/5 shadow-2xl space-y-4 lg:space-y-5 w-[140px] lg:w-[180px] shrink-0">
                         <HUDSlider
                             label="Scale"
                             icon={<Maximize className="w-3 h-3" />}
@@ -103,6 +119,14 @@ export const HUD: React.FC<HUDProps> = ({
                             label="Mirror"
                         >
                             <FlipHorizontal />
+                        </ToolButton>
+
+                        <ToolButton
+                            active={false}
+                            onClick={() => toggleTool(retryCamera)}
+                            label="Relens"
+                        >
+                            <RefreshCw />
                         </ToolButton>
 
                         <ToolButton

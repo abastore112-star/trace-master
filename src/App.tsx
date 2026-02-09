@@ -158,6 +158,13 @@ const App: React.FC = () => {
     if (window.navigator.vibrate) window.navigator.vibrate(5);
   };
 
+  const [cameraKey, setCameraKey] = useState(0);
+
+  const retryCamera = () => {
+    setCameraKey(prev => prev + 1);
+    if (window.navigator.vibrate) window.navigator.vibrate([30, 10, 30]);
+  };
+
   const autoTuneManually = () => {
     if (!image) return;
     setIsAutoTuning(true);
@@ -187,6 +194,7 @@ const App: React.FC = () => {
         style={{ pointerEvents: isLocked || (showCamera && view === 'studio') ? 'auto' : 'none' }}
       >
         <CameraOverlay
+          key={`camera-${cameraKey}`}
           sketchCanvas={sketchCanvas}
           opacity={opacity}
           mirror={mirror}
@@ -208,6 +216,7 @@ const App: React.FC = () => {
             resetTransform={resetTransform}
             transform={transform}
             setTransform={setTransform}
+            retryCamera={retryCamera}
           />
         )}
 

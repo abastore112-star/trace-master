@@ -19,37 +19,66 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
   const [videoTrack, setVideoTrack] = useState<MediaStreamTrack | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const lastPos = useRef({ x: 0, y: 0 });
+  const [retryCount, setRetryCount] = useState(0);
+
+  const startCamera = async () => {
+    setError(null);
+    let stream: MediaStream | null = null;
+
+    // Comprehensive constraint fallback sequence
+    const constraintSets = [
+      { video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } } }, // 4K
+      { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } }, // 1080p
+      { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },  // 720p
+      { video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } },   // 480p
+      { video: { facingMode: 'environment' } }, // Default environment
+      { video: true } // Absolute fallback
+    ];
+
+    for (const constraints of constraintSets) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ ...constraints, audio: false });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          // Important for Android: ensure video has metadata before playing
+          await new Promise((resolve) => {
+            if (videoRef.current) {
+              videoRef.current.onloadedmetadata = () => {
+                videoRef.current?.play().then(resolve).catch(resolve);
+              };
+            }
+          });
+
+          const track = stream.getVideoTracks()[0];
+          setVideoTrack(track);
+          console.log(`Lens initialized with:`, constraints);
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`Constraint set failed: ${err.name}`, constraints);
+        // Continue to next set
+      }
+    }
+
+    if (!stream) {
+      setError("Lens initialization failed. check permissions or hardware access.");
+    }
+  };
 
   useEffect(() => {
-    let stream: MediaStream | null = null;
-    const startCamera = async () => {
-      const constraintSets = [
-        { video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } } },
-        { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } },
-        { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
-        { video: { facingMode: 'environment' } }
-      ];
-
-      for (const constraints of constraintSets) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ ...constraints, audio: false });
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            await videoRef.current.play();
-            const track = stream.getVideoTracks()[0];
-            setVideoTrack(track);
-            break;
-          }
-        } catch (err) {
-          console.warn(`Constraint set failed`, constraints);
-        }
-      }
-
-      if (!stream) setError("Lens initialization failed. check permissions.");
-    };
     startCamera();
-    return () => stream?.getTracks().forEach(t => t.stop());
-  }, []);
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [retryCount]);
+
+  const forceRestartLens = () => {
+    setRetryCount(prev => prev + 1);
+    if (window.navigator.vibrate) window.navigator.vibrate([30, 10, 30]);
+  };
 
   useEffect(() => {
     if (sketchCanvas && projectionCanvasRef.current) {

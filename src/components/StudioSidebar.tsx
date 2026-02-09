@@ -43,6 +43,11 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
         p-8 lg:p-0 rounded-t-[4rem] lg:rounded-none shadow-2xl lg:shadow-none
         ${!image ? 'lg:opacity-10 lg:pointer-events-none' : 'lg:opacity-100'}
       `}
+            style={{
+                paddingBottom: 'calc(var(--safe-bottom) + 2rem)',
+                paddingLeft: 'max(1.5rem, var(--safe-left))',
+                paddingRight: 'max(1.5rem, var(--safe-right))'
+            }}
         >
             <div className="lg:hidden w-16 h-1.5 bg-sienna/30 rounded-full mx-auto mb-8" onClick={() => setIsSidebarOpen(false)} />
 

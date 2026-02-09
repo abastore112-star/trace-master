@@ -19,7 +19,13 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
     fileInputRef, handleFileUpload, isSidebarOpen, setIsSidebarOpen
 }) => {
     return (
-        <nav className="h-16 lg:h-24 px-4 lg:px-12 flex justify-between items-center z-[60] shrink-0 silk-panel border-0 border-b border-sienna/20 shadow-sm">
+        <nav
+            className="w-full px-4 lg:px-12 flex justify-between items-center z-[60] shrink-0 silk-panel border-0 border-b border-sienna/20 shadow-sm"
+            style={{
+                height: 'var(--hdr-h)',
+                paddingTop: 'var(--safe-top)'
+            }}
+        >
             <div className="flex items-center gap-3 lg:gap-8">
                 <button
                     onClick={onBack}
