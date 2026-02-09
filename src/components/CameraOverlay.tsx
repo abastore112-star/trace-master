@@ -44,13 +44,27 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
         stream = await navigator.mediaDevices.getUserMedia({ ...constraints, audio: false });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Important for Android: ensure video has metadata before playing
-          await new Promise((resolve) => {
-            if (videoRef.current) {
-              videoRef.current.onloadedmetadata = () => {
-                videoRef.current?.play().then(resolve).catch(resolve);
-              };
-            }
+
+          await new Promise<void>((resolve) => {
+            const v = videoRef.current;
+            if (!v) return resolve();
+
+            const onReady = () => {
+              v.onplaying = null;
+              v.onloadedmetadata = null;
+              resolve();
+            };
+
+            v.onplaying = onReady;
+            v.onloadedmetadata = onReady;
+
+            // Timeout to prevent infinite hang on legacy hardware
+            setTimeout(onReady, 2000);
+
+            v.play().catch(() => {
+              console.warn("Manual play play required?");
+              resolve();
+            });
           });
 
           const track = stream.getVideoTracks()[0];
@@ -96,11 +110,17 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
   }, [sketchCanvas]);
 
   useEffect(() => {
-    const capabilities = videoTrack ? (videoTrack.getCapabilities() as any) : null;
-    if (videoTrack && capabilities && capabilities.torch) {
-      videoTrack.applyConstraints({
-        advanced: [{ torch: settings.torchOn } as any]
-      }).catch(e => console.error("Torch unavailable", e));
+    if (videoTrack) {
+      const capabilities = videoTrack.getCapabilities() as any;
+      if (capabilities?.torch) {
+        // Debounce torch to prevent flickering on hardware latency
+        const timer = setTimeout(() => {
+          videoTrack.applyConstraints({
+            advanced: [{ torch: settings.torchOn } as any]
+          }).catch(e => console.warn("Torch failed", e));
+        }, 150);
+        return () => clearTimeout(timer);
+      }
     }
   }, [settings.torchOn, videoTrack]);
 

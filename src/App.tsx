@@ -97,6 +97,9 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const isProcessingRef = useRef(false);
+  const nextUpdateRef = useRef<{ img: HTMLImageElement, opts: ProcessingOptions } | null>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -143,21 +146,73 @@ const App: React.FC = () => {
     }
   };
 
-  const updateSketch = useCallback((img: HTMLImageElement, opts: ProcessingOptions) => {
-    if (hiddenCanvasRef.current) {
-      const hCanvas = hiddenCanvasRef.current;
-      applyFilters(hCanvas, img, opts);
+  const processWorkerRequest = useCallback((img: HTMLImageElement, opts: ProcessingOptions) => {
+    if (!workerRef.current || !hiddenCanvasRef.current) return;
 
-      const newCanvas = document.createElement('canvas');
-      newCanvas.width = hCanvas.width;
-      newCanvas.height = hCanvas.height;
-      const nCtx = newCanvas.getContext('2d');
-      if (nCtx) {
-        nCtx.drawImage(hCanvas, 0, 0);
-        setSketchCanvas(newCanvas);
-      }
+    isProcessingRef.current = true;
+    const hCanvas = hiddenCanvasRef.current;
+    const hCtx = hCanvas.getContext('2d', { willReadFrequently: true });
+    if (!hCtx) return;
+
+    // Preparation pass (Brightness/Contrast and Scaling) on main thread
+    // This is fast enough as it uses native browser filters
+    const MAX_DIM = 1280;
+    let w = img.naturalWidth;
+    let h = img.naturalHeight;
+    if (w > MAX_DIM || h > MAX_DIM) {
+      const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
     }
+    hCanvas.width = w;
+    hCanvas.height = h;
+
+    hCtx.filter = `brightness(${opts.brightness}%) contrast(${opts.contrast}%)`;
+    hCtx.drawImage(img, 0, 0, w, h);
+    hCtx.filter = 'none';
+
+    const imageData = hCtx.getImageData(0, 0, w, h);
+    workerRef.current.postMessage({ imageData, options: opts }, [imageData.data.buffer]);
   }, []);
+
+  // Initialize Worker
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('./utils/imageWorker.ts', import.meta.url), { type: 'module' });
+
+    workerRef.current.onmessage = (e) => {
+      const { imageData } = e.data;
+      if (hiddenCanvasRef.current) {
+        const hCanvas = hiddenCanvasRef.current;
+        hCanvas.getContext('2d')?.putImageData(imageData, 0, 0);
+
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = hCanvas.width;
+        newCanvas.height = hCanvas.height;
+        const nCtx = newCanvas.getContext('2d');
+        if (nCtx) {
+          nCtx.drawImage(hCanvas, 0, 0);
+          setSketchCanvas(newCanvas);
+        }
+      }
+
+      isProcessingRef.current = false;
+      // If an update was requested while we were busy, do it now
+      if (nextUpdateRef.current) {
+        processWorkerRequest(nextUpdateRef.current.img, nextUpdateRef.current.opts);
+        nextUpdateRef.current = null;
+      }
+    };
+
+    return () => workerRef.current?.terminate();
+  }, [processWorkerRequest]);
+
+  const updateSketch = useCallback((img: HTMLImageElement, opts: ProcessingOptions) => {
+    if (isProcessingRef.current) {
+      nextUpdateRef.current = { img, opts };
+    } else {
+      processWorkerRequest(img, opts);
+    }
+  }, [processWorkerRequest]);
 
   useEffect(() => {
     if (image) updateSketch(image, options);

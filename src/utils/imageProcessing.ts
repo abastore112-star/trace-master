@@ -91,6 +91,8 @@ export const extractPalette = (image: HTMLImageElement): string[] => {
   return Array.from(colors);
 };
 
+export const MAX_IMAGE_DIM = 1280; // Reduced for low-end device stability (Samsung J7 safe-zone)
+
 export const applyFilters = (
   canvas: HTMLCanvasElement,
   image: HTMLImageElement,
@@ -99,13 +101,11 @@ export const applyFilters = (
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return;
 
-  // Resolution capping for performance (Max 1920px)
-  const MAX_DIM = 1920;
   let width = image.naturalWidth;
   let height = image.naturalHeight;
 
-  if (width > MAX_DIM || height > MAX_DIM) {
-    const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+  if (width > MAX_IMAGE_DIM || height > MAX_IMAGE_DIM) {
+    const ratio = Math.min(MAX_IMAGE_DIM / width, MAX_IMAGE_DIM / height);
     width = Math.round(width * ratio);
     height = Math.round(height * ratio);
   }
