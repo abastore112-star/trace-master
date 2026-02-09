@@ -39,10 +39,10 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
         fixed lg:static inset-x-0 bottom-0 lg:inset-auto
         lg:w-[420px] lg:flex flex-col gap-8 shrink-0 
         transition-all duration-700 ease-out z-[1070]
-        bg-white/40 lg:bg-transparent backdrop-blur-3xl lg:backdrop-blur-none
-        ${isSidebarOpen ? 'translate-y-0 h-[45vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
+        bg-white/60 lg:bg-transparent backdrop-blur-3xl lg:backdrop-blur-none
+        ${isSidebarOpen ? 'translate-y-0 h-[65vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
         ${visible ? 'lg:opacity-100' : 'opacity-0 pointer-events-none translate-y-20 lg:translate-y-0'}
-        p-8 lg:p-0 rounded-t-[4rem] lg:rounded-none lg:shadow-none
+        p-8 lg:p-0 rounded-t-[4rem] lg:rounded-none lg:shadow-none touch-auto
         ${!image ? 'lg:opacity-10 lg:pointer-events-none' : ''}
       `}
             style={{

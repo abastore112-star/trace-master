@@ -215,7 +215,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400 touch-none">
+    <div className="h-[100dvh] flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400">
       {/* Persistent Camera Overlay - Never unmounts to prevent source errors */}
       <div
         className={`fixed inset-0 transition-opacity duration-700 ${isLocked ? 'z-[1000] opacity-100' : (showCamera && view === 'studio' ? 'z-10 opacity-100' : 'z-[-1] opacity-0 pointer-events-none')}`}
