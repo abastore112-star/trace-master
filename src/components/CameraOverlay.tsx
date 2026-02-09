@@ -55,13 +55,13 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ sketchCanvas, opacity, mi
           break;
         }
       } catch (err: any) {
-        console.warn(`Constraint set failed: ${err.name}`, constraints);
+        console.warn(`Constraint set failed: ${err.name} - ${err.message}`, constraints);
         // Continue to next set
       }
     }
 
     if (!stream) {
-      setError("Lens initialization failed. check permissions or hardware access.");
+      setError(`Lens failed: Hardware busy or permission denied. (Retry with Relens or check browser settings)`);
     }
   };
 

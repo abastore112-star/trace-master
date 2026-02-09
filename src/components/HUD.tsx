@@ -49,10 +49,10 @@ export const HUD: React.FC<HUDProps> = ({
 
             {/* Bottom Right: Unified Action Bar (Horizontal Expansion) */}
             <div
-                className="absolute flex items-center justify-end gap-3 pointer-events-auto flex-row-reverse max-w-[calc(100vw-3rem)] overflow-visible"
+                className="fixed flex items-center justify-end gap-3 pointer-events-auto flex-row-reverse max-w-[calc(100vw-2rem)] overflow-visible z-[1050]"
                 style={{
-                    bottom: 'calc(var(--safe-bottom) + 1.5rem)',
-                    right: 'calc(var(--safe-right) + 1.5rem)'
+                    bottom: 'calc(var(--safe-bottom) + 2rem)',
+                    right: 'calc(var(--safe-right) + 1rem)'
                 }}
             >
                 {/* Main FAB Toggle */}

@@ -16,6 +16,13 @@
     --safe-right: env(safe-area-inset-right, 0px);
 }
 
+html {
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
 @layer base {
     :root {
         --hdr-h: clamp(60px, 8vh, 80px);
@@ -32,11 +39,14 @@
     }
 
     body {
-        @apply bg-cream text-sienna overflow-x-hidden transition-colors duration-500;
-        touch-action: none;
+        @apply bg-cream text-sienna overflow-x-hidden transition-colors duration-500 w-full;
+        touch-action: pan-y;
+        /* Allow vertical scroll but prevent swipe back/forth if needed */
+        -webkit-overflow-scrolling: touch;
         -webkit-user-select: none;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
+        min-height: 100dvh;
     }
 }
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ArrowRight, MousePointer2, Sparkles, PenTool, 
+import {
+  ArrowRight, MousePointer2, Sparkles, PenTool,
   Frame, Hand, Check, Plus, Quote,
   Zap, Palette, Menu, X, Sun, Moon
 } from 'lucide-react';
@@ -16,7 +16,7 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileInputRef, toggleTheme, theme }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -33,16 +33,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
   }, []);
 
   return (
-    <div className="bg-cream text-sienna selection:bg-accent selection:text-sienna overflow-x-hidden transition-colors duration-500">
+    <div className="bg-cream text-sienna selection:bg-accent selection:text-sienna overflow-x-hidden transition-colors duration-500 max-w-full">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-[100] px-4 lg:px-12 py-4 lg:py-8 flex justify-between items-center bg-cream/95 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none transition-all duration-500 border-b border-sienna/10 md:border-b-0">
-        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+      <nav className="fixed top-0 w-full z-[100] px-4 lg:px-12 py-4 lg:py-8 flex justify-between items-center bg-cream/95 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none transition-all duration-500 border-b border-sienna/10 md:border-b-0 max-w-full">
+        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center transition-transform group-hover:rotate-12 shadow-lg shadow-accent/40">
             <Frame className="w-5 h-5 text-sienna dark:text-white" />
           </div>
           <span className="text-sm font-bold uppercase tracking-[0.4em]">TraceMaster</span>
         </div>
-        
+
         <div className="hidden md:flex items-center gap-12 text-[11px] font-bold uppercase tracking-[0.2em]">
           <a href="#philosophy" className="text-sienna/80 hover:text-accent transition-all hover:tracking-[0.3em]">Philosophy</a>
           <a href="#atelier" className="text-sienna/80 hover:text-accent transition-all hover:tracking-[0.3em]">Atelier</a>
@@ -50,7 +50,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={toggleTheme}
             className="p-3 lg:p-4 rounded-full bg-sienna/5 hover:bg-sienna/10 transition-all text-sienna/80 hover:text-accent border border-sienna/10"
             aria-label="Toggle Theme"
@@ -58,14 +58,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
 
-          <button 
+          <button
             onClick={onStart}
             className="px-8 py-3 bg-sienna text-cream border border-sienna/10 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-accent hover:text-sienna dark:hover:text-white transition-all shadow-xl"
           >
             Studio
           </button>
-          
-          <button 
+
+          <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden p-3 text-sienna/90"
           >
@@ -77,10 +77,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[90] bg-cream flex flex-col items-center justify-center p-10 space-y-10 animate-in fade-in duration-500">
-           <a href="#philosophy" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Philosophy</a>
-           <a href="#atelier" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">The Atelier</a>
-           <a href="#reactions" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Reactions</a>
-           <button onClick={() => {onStart(); setIsMenuOpen(false);}} className="text-4xl font-bold uppercase tracking-[0.2em] text-accent">Studio</button>
+          <a href="#philosophy" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Philosophy</a>
+          <a href="#atelier" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">The Atelier</a>
+          <a href="#reactions" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Reactions</a>
+          <button onClick={() => { onStart(); setIsMenuOpen(false); }} className="text-4xl font-bold uppercase tracking-[0.2em] text-accent">Studio</button>
         </div>
       )}
 
@@ -89,17 +89,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
         <div className="max-w-5xl space-y-12 z-10">
           <div className="space-y-6 reveal active">
             <span className="text-[11px] uppercase font-bold tracking-[0.6em] text-sienna/70 px-4 inline-block mb-2">Chapter I: The Awakening</span>
-            <h1 className="text-[14vw] lg:text-[9vw] font-light italic leading-[0.85] tracking-tighter">
+            <h1 className="text-[12vw] lg:text-[9vw] font-light italic leading-[0.85] tracking-tighter">
               Light meets <br className="lg:hidden" /> <span className="text-accent">lead.</span>
             </h1>
             <p className="text-base lg:text-xl text-sienna/80 max-w-sm lg:max-w-2xl mx-auto font-light leading-relaxed px-4">
-              The ethereal bridge between digital vision and physical creation. 
+              The ethereal bridge between digital vision and physical creation.
               Project the invisible onto your canvas with cinematic precision.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 reveal delay-1 active">
-            <button 
+            <button
               onClick={() => fileInputRef.current?.click()}
               className="w-full sm:w-auto group relative px-14 py-7 bg-sienna text-cream rounded-full overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-2xl"
             >
@@ -113,7 +113,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
         </div>
 
         <div className="absolute top-[20%] left-[5%] float-anim opacity-10 hidden lg:block"><PenTool className="w-32 h-32 text-accent" /></div>
-        <div className="absolute bottom-[10%] right-[5%] float-anim opacity-10 hidden lg:block" style={{animationDelay: '-2s'}}><Sparkles className="w-40 h-40 text-accent" /></div>
+        <div className="absolute bottom-[10%] right-[5%] float-anim opacity-10 hidden lg:block" style={{ animationDelay: '-2s' }}><Sparkles className="w-40 h-40 text-accent" /></div>
       </section>
 
       {/* Philosophy Section */}
@@ -137,9 +137,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
             </div>
           </div>
           <div className="relative aspect-square silk-panel rounded-[4rem] flex items-center justify-center p-16 overflow-hidden reveal delay-1 shadow-2xl border-sienna/20">
-             <div className="absolute inset-0 bg-gradient-to-br from-accent/40 to-transparent"></div>
-             <Hand className="w-32 h-32 lg:w-48 lg:h-48 text-accent float-anim" />
-             <div className="absolute bottom-16 text-[11px] font-bold uppercase tracking-[0.4em] text-sienna/60">Tactile Precision</div>
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/40 to-transparent"></div>
+            <Hand className="w-32 h-32 lg:w-48 lg:h-48 text-accent float-anim" />
+            <div className="absolute bottom-16 text-[11px] font-bold uppercase tracking-[0.4em] text-sienna/60">Tactile Precision</div>
           </div>
         </div>
       </section>
@@ -153,19 +153,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <FeatureCard 
+            <FeatureCard
               icon={<Zap className="w-8 h-8" />}
               title="Adaptive Lens"
               desc="Automatic image analysis instantly optimizes lines for your specific lighting and paper grain."
               delay="reveal"
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Palette className="w-8 h-8" />}
               title="Palette Guide"
               desc="Extracts core pigments from your reference to help you match physical paints or colored pencils."
               delay="reveal delay-1"
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<MousePointer2 className="w-8 h-8" />}
               title="Micro-Nudge"
               desc="Fine-tune your projection with sub-pixel spatial controls for absolute alignment accuracy."
@@ -186,19 +186,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <TestimonialCard 
+            <TestimonialCard
               name="Julianne R."
               role="Oil Painter"
               text="Magic in my pocket. The lines float over my canvas, letting me focus on the emotion of the stroke."
               delay="reveal"
             />
-            <TestimonialCard 
+            <TestimonialCard
               name="Marcus T."
               role="Architect"
               text="For on-site spatial studies, TraceMaster is unparalleled. It replaces a studio-worth of equipment."
               delay="reveal delay-1"
             />
-            <TestimonialCard 
+            <TestimonialCard
               name="Aria Sol"
               role="Illustrator"
               text="The color guide tool bridges the gap between my screen and my physical pigment tubes perfectly."
