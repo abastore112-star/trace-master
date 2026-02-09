@@ -72,6 +72,29 @@ const App: React.FC = () => {
     lockWake: true
   });
 
+  const [uiVisible, setUiVisible] = useState(true);
+  const uiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const wakeUI = useCallback(() => {
+    setUiVisible(true);
+    if (uiTimeoutRef.current) clearTimeout(uiTimeoutRef.current);
+    uiTimeoutRef.current = setTimeout(() => {
+      setUiVisible(false);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    if (view === 'studio') {
+      wakeUI();
+      const events = ['mousedown', 'mousemove', 'touchstart', 'scroll', 'keydown'];
+      events.forEach(e => window.addEventListener(e, wakeUI));
+      return () => {
+        if (uiTimeoutRef.current) clearTimeout(uiTimeoutRef.current);
+        events.forEach(e => window.removeEventListener(e, wakeUI));
+      };
+    }
+  }, [view, wakeUI]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -122,12 +145,17 @@ const App: React.FC = () => {
 
   const updateSketch = useCallback((img: HTMLImageElement, opts: ProcessingOptions) => {
     if (hiddenCanvasRef.current) {
-      applyFilters(hiddenCanvasRef.current, img, opts);
+      const hCanvas = hiddenCanvasRef.current;
+      applyFilters(hCanvas, img, opts);
+
       const newCanvas = document.createElement('canvas');
-      newCanvas.width = hiddenCanvasRef.current.width;
-      newCanvas.height = hiddenCanvasRef.current.height;
-      newCanvas.getContext('2d')?.drawImage(hiddenCanvasRef.current, 0, 0);
-      setSketchCanvas(newCanvas);
+      newCanvas.width = hCanvas.width;
+      newCanvas.height = hCanvas.height;
+      const nCtx = newCanvas.getContext('2d');
+      if (nCtx) {
+        nCtx.drawImage(hCanvas, 0, 0);
+        setSketchCanvas(newCanvas);
+      }
     }
   }, []);
 
@@ -187,7 +215,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400">
+    <div className="h-[100dvh] flex flex-col bg-cream overflow-hidden text-sienna transition-colors duration-400 touch-none">
       {/* Persistent Camera Overlay - Never unmounts to prevent source errors */}
       <div
         className={`fixed inset-0 transition-opacity duration-700 ${isLocked ? 'z-[1000] opacity-100' : (showCamera && view === 'studio' ? 'z-10 opacity-100' : 'z-[-1] opacity-0 pointer-events-none')}`}
@@ -217,6 +245,7 @@ const App: React.FC = () => {
             transform={transform}
             setTransform={setTransform}
             retryCamera={retryCamera}
+            visible={uiVisible}
           />
         )}
 
@@ -254,6 +283,7 @@ const App: React.FC = () => {
         mirror={mirror}
         setMirror={setMirror}
         retryCamera={retryCamera}
+        visible={uiVisible}
       />
 
       <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
@@ -320,6 +350,7 @@ const App: React.FC = () => {
           nudge={nudge}
           settings={settings}
           setSettings={setSettings}
+          visible={uiVisible}
         />
 
         {isSidebarOpen && (

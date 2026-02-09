@@ -15,14 +15,14 @@ interface HUDProps {
     retryCamera: () => void;
 }
 
-export const HUD: React.FC<HUDProps> = ({
+export const HUD: React.FC<HUDProps & { visible: boolean }> = ({
     settings, setSettings, originalBase64, setIsLocked, nudge,
     mirror, setMirror, resetTransform, transform, setTransform,
-    retryCamera
+    retryCamera, visible
 }) => {
     return (
         <div
-            className="absolute inset-0 pointer-events-none z-[1002]"
+            className={`absolute inset-0 pointer-events-none z-[1002] transition-opacity duration-1000 ${visible ? 'opacity-100' : 'opacity-0'}`}
             style={{
                 paddingTop: 'calc(var(--safe-top) + 1.5rem)',
                 paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)',
@@ -30,26 +30,28 @@ export const HUD: React.FC<HUDProps> = ({
                 paddingRight: 'calc(var(--safe-right) + 1.5rem)',
             }}
         >
-            {/* Top Right: Status & Quick Lock */}
-            <div className="absolute top-[var(--safe-top)] right-[var(--safe-right)] mt-6 mr-6 lg:mt-12 lg:mr-12 flex flex-col items-end gap-4 pointer-events-auto">
+            {/* Top Left: Quick Lock - Pushed down to avoid Header overlap */}
+            <div
+                className="absolute left-[var(--safe-left)] ml-6 lg:ml-12 pointer-events-auto transition-all duration-500"
+                style={{ top: 'calc(var(--safe-top) + var(--hdr-h) + 1rem)' }}
+            >
                 <button
                     onClick={() => setIsLocked(true)}
-                    className="flex items-center gap-2.5 px-5 py-2.5 bg-accent text-sienna dark:bg-white dark:text-sienna rounded-full font-bold text-[9px] uppercase tracking-[0.3em] shadow-lg hover:scale-105 active:scale-95 transition-all"
+                    className="flex items-center gap-3 px-6 py-4 bg-accent text-sienna dark:bg-white dark:text-sienna rounded-full font-bold text-[10px] uppercase tracking-[0.4em] shadow-2xl hover:scale-105 active:scale-95 transition-all border border-accent/20"
                 >
-                    <Lock className="w-3.5 h-3.5" /> Lock
+                    <Lock className="w-4 h-4" /> Lock Atelier
                 </button>
             </div>
 
-            {/* Bottom Right: Minimal Nudge Panel */}
+            {/* Bottom Left: Nudge Panel - Moved to side */}
             <div
-                className="fixed flex flex-col items-end gap-3 pointer-events-auto z-[1050]"
+                className="fixed flex flex-col items-start gap-3 pointer-events-auto z-[1050]"
                 style={{
                     bottom: 'calc(var(--safe-bottom) + 1.5rem)',
-                    right: 'calc(var(--safe-right) + 1rem)'
+                    left: 'calc(var(--safe-left) + 1rem)'
                 }}
             >
-                {/* Spatial Controls (Inspector Lite) */}
-                <div className="bg-white/95 dark:bg-[#12100e] backdrop-blur-3xl p-4 lg:p-5 rounded-[2.5rem] border border-sienna/10 dark:border-white/5 shadow-2xl space-y-4 w-[110px] lg:w-[130px] shrink-0 flex flex-col items-center">
+                <div className="bg-white/95 dark:bg-[#12100e] backdrop-blur-3xl p-4 lg:p-5 rounded-[2.5rem] border border-sienna/10 dark:border-white/5 shadow-2xl space-y-4 w-[110px] lg:w-[130px] flex flex-col items-center">
                     <span className="text-[7px] font-black uppercase tracking-widest text-accent/60">Position</span>
                     <div className="flex flex-col items-center gap-1 opacity-90">
                         <HUDNudgeButton onClick={() => nudge(0, -1)}><ChevronUp /></HUDNudgeButton>
@@ -65,7 +67,7 @@ export const HUD: React.FC<HUDProps> = ({
 
             {/* Reference Thumbnail */}
             {settings.showReference && originalBase64 && (
-                <div className="absolute top-6 left-6 lg:top-12 lg:left-12 w-32 h-32 lg:w-48 lg:h-48 silk-panel rounded-2xl overflow-hidden border border-accent/20 shadow-2xl animate-in slide-in-from-left duration-700 pointer-events-auto">
+                <div className="absolute top-6 right-6 lg:top-12 lg:right-12 w-32 h-32 lg:w-48 lg:h-48 silk-panel rounded-2xl overflow-hidden border border-accent/20 shadow-2xl animate-in slide-in-from-right duration-700 pointer-events-auto">
                     <img src={originalBase64} className="w-full h-full object-contain grayscale opacity-60" alt="Reference" />
                     <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/40 backdrop-blur-md rounded-full text-[7px] text-white uppercase tracking-[0.2em] font-bold">Ref Art</div>
                 </div>

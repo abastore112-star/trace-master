@@ -22,13 +22,14 @@ interface StudioSidebarProps {
     nudge: (dx: number, dy: number) => void;
     settings: { lockWake: boolean };
     setSettings: any;
+    visible: boolean;
 }
 
 const StudioSidebar: React.FC<StudioSidebarProps> = ({
     image, isSidebarOpen, setIsSidebarOpen, activeTab, setActiveTab,
     options, setOptions, opacity, setOpacity, mirror, setMirror,
     transform, setTransform, palette, autoTuneManually, nudge,
-    settings, setSettings
+    settings, setSettings, visible
 }) => {
     const [showAdvanced, setShowAdvanced] = React.useState(false);
 
@@ -40,8 +41,9 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
         transition-all duration-700 ease-out z-[1070]
         bg-transparent
         ${isSidebarOpen ? 'translate-y-0 h-[85vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
+        ${visible ? 'lg:opacity-100' : 'opacity-0 pointer-events-none translate-y-20 lg:translate-y-0'}
         p-8 lg:p-0 rounded-t-[4rem] lg:rounded-none lg:shadow-none
-        ${!image ? 'lg:opacity-10 lg:pointer-events-none' : 'lg:opacity-100'}
+        ${!image ? 'lg:opacity-10 lg:pointer-events-none' : ''}
       `}
             style={{
                 paddingBottom: 'calc(var(--safe-bottom) + 2rem)',

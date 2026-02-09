@@ -30,12 +30,13 @@ interface StudioHeaderProps {
     mirror: boolean;
     setMirror: (v: boolean) => void;
     retryCamera: () => void;
+    visible: boolean;
 }
 
 const StudioHeader: React.FC<StudioHeaderProps> = ({
     theme, toggleTheme, onBack, showCamera, setShowCamera, image,
     fileInputRef, handleFileUpload,
-    isSidebarOpen, setIsSidebarOpen, settings, setSettings, mirror, setMirror, retryCamera
+    isSidebarOpen, setIsSidebarOpen, settings, setSettings, mirror, setMirror, retryCamera, visible
 }) => {
     const [isToolsOpen, setIsToolsOpen] = React.useState(false);
 
@@ -46,7 +47,7 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
 
     return (
         <nav
-            className="w-full px-4 lg:px-12 flex justify-between items-center z-[1060] shrink-0 silk-panel border-0 border-b border-sienna/20 shadow-sm"
+            className={`w-full px-4 lg:px-12 flex justify-between items-center z-[1060] shrink-0 silk-panel border-0 border-b border-sienna/20 shadow-sm transition-all duration-500 ${visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
             style={{
                 height: 'var(--hdr-h)',
                 paddingTop: 'var(--safe-top)'
@@ -80,7 +81,7 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 
                 {image && (
-                    <div className="flex items-center bg-sienna/5 p-1 rounded-full border border-sienna/10">
+                    <div className={`flex items-center p-1 rounded-full border transition-all ${theme === 'light' ? 'bg-sienna/10 border-sienna/20 shadow-sm' : 'bg-sienna/5 border-sienna/10'}`}>
                         <button
                             onClick={() => setShowCamera(!showCamera)}
                             className={`px-4 lg:px-8 h-10 lg:h-12 rounded-full text-[9px] font-bold uppercase tracking-[0.2em] transition-all flex items-center gap-2 shadow-sm ${showCamera ? 'bg-accent text-sienna dark:text-white' : 'bg-sienna text-cream'}`}
@@ -89,17 +90,21 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                             <span className="hidden sm:inline">{showCamera ? 'Cease' : 'Launch'}</span>
                         </button>
 
-                        <button
-                            onClick={() => setIsToolsOpen(!isToolsOpen)}
-                            className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full transition-all ${isToolsOpen ? 'text-accent' : 'text-sienna/60'}`}
-                        >
-                            <Settings2 className={`w-5 h-5 transition-transform duration-500 ${isToolsOpen ? 'rotate-180' : ''}`} />
-                        </button>
+                        {/* Tools Dropdown - Only visible when AR Camera is active */}
+                        {showCamera && (
+                            <button
+                                onClick={() => setIsToolsOpen(!isToolsOpen)}
+                                className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full transition-all ${isToolsOpen ? 'text-accent' : (theme === 'light' ? 'text-sienna' : 'text-sienna/60')}`}
+                                title="Studio Settings"
+                            >
+                                <Settings2 className={`w-5 h-5 transition-transform duration-500 ${isToolsOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                        )}
                     </div>
                 )}
 
                 {/* Transparent Tools Dropdown */}
-                {isToolsOpen && (
+                {isToolsOpen && showCamera && (
                     <div className="absolute top-full right-0 mt-4 p-2 silk-panel rounded-3xl border border-sienna/10 shadow-2xl flex flex-col gap-1 animate-in slide-in-from-top-4 duration-300 min-w-[140px]">
                         <HeaderTool
                             active={settings.torchOn}
@@ -128,9 +133,10 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                     </div>
                 )}
 
+                {/* Sidebar Toggle - Only on Mobile */}
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full border border-sienna/20 transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white' : 'bg-white/40 shadow-sm'}`}
+                    className={`lg:hidden w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full border transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white border-accent' : 'bg-white/40 shadow-sm border-sienna/20'}`}
                 >
                     <Maximize className="w-4 h-4" />
                 </button>
