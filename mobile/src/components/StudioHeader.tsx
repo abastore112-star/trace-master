@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
 import { ChevronLeft, Lock } from 'lucide-react-native';
+const ChevronLeftIcon = ChevronLeft as any;
+const LockIcon = Lock as any;
 import { MotiView } from 'moti';
 
 export const StudioHeader = ({ onBack, visible }: any) => {
@@ -10,7 +12,7 @@ export const StudioHeader = ({ onBack, visible }: any) => {
                 opacity: visible ? 1 : 0,
                 translateY: visible ? 0 : -20
             }}
-            transition={{ type: 'timing', duration: 400 }}
+            transition={{ type: 'timing', duration: 500 } as any}
             pointerEvents={visible ? 'auto' : 'none'}
             className="absolute top-0 left-0 right-0 z-50"
         >
@@ -20,11 +22,11 @@ export const StudioHeader = ({ onBack, visible }: any) => {
                         onPress={onBack}
                         className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md items-center justify-center border border-white/10"
                     >
-                        <ChevronLeft color="white" size={20} />
+                        <ChevronLeftIcon color="white" size={20} />
                     </TouchableOpacity>
 
                     <View className="flex-row items-center bg-accent px-4 py-2 rounded-full shadow-lg">
-                        <Lock color="#2D1810" size={12} />
+                        <LockIcon color="#2D1810" size={12} />
                         <Text className="text-sienna font-bold text-[10px] uppercase tracking-[0.2em] ml-2">
                             Studio Lock
                         </Text>

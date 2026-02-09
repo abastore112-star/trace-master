@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
 import { Palette, Camera, Sparkles, ChevronRight } from 'lucide-react-native';
+const PaletteIcon = Palette as any;
+const CameraIcon = Camera as any;
+const SparklesIcon = Sparkles as any;
+const ChevronRightIcon = ChevronRight as any;
 import { MotiView } from 'moti';
 
 const { width } = Dimensions.get('window');
@@ -18,18 +22,18 @@ export const LandingScreen = ({ onStart }: any) => {
                         duration: 5000,
                         loop: true,
                         repeatReverse: true,
-                    }}
+                    } as any}
                     className="absolute w-full h-full bg-accent/20 rounded-full"
                 />
 
                 <MotiView
                     from={{ opacity: 0, translateY: 30 }}
                     animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ type: 'timing', duration: 1000 }}
+                    transition={{ type: 'timing', duration: 1000 } as any}
                     className="items-center"
                 >
                     <View className="w-20 h-20 bg-accent rounded-3xl items-center justify-center shadow-2xl shadow-accent/40 mb-8">
-                        <Palette color="#2D1810" size={40} strokeWidth={1.5} />
+                        <PaletteIcon color="#2D1810" size={40} strokeWidth={1.5} />
                     </View>
 
                     <Text className="text-white text-5xl font-light tracking-[0.2em] mb-2 uppercase">
@@ -40,8 +44,8 @@ export const LandingScreen = ({ onStart }: any) => {
                     </Text>
 
                     <View className="flex-row gap-6 mb-16">
-                        <FeatureIcon icon={<Camera color="white" size={18} />} label="AR Ready" />
-                        <FeatureIcon icon={<Sparkles color="white" size={18} />} label="AI Precision" />
+                        <FeatureIcon icon={<CameraIcon color="white" size={18} />} label="AR Ready" />
+                        <FeatureIcon icon={<SparklesIcon color="white" size={18} />} label="AI Precision" />
                     </View>
 
                     <TouchableOpacity
@@ -52,7 +56,7 @@ export const LandingScreen = ({ onStart }: any) => {
                         <Text className="text-sienna font-bold uppercase tracking-[0.2em] text-sm mr-3">
                             Enter Atelier
                         </Text>
-                        <ChevronRight color="#2D1810" size={18} />
+                        <ChevronRightIcon color="#2D1810" size={18} />
                     </TouchableOpacity>
                 </MotiView>
 
