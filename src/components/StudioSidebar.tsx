@@ -37,10 +37,10 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
             className={`
         fixed lg:static inset-x-0 bottom-0 lg:inset-auto
         lg:w-[420px] lg:flex flex-col gap-8 shrink-0 
-        transition-all duration-700 ease-out z-[70]
-        bg-cream lg:bg-transparent
+        transition-all duration-700 ease-out z-[1070]
+        bg-transparent
         ${isSidebarOpen ? 'translate-y-0 h-[85vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
-        p-8 lg:p-0 rounded-t-[4rem] lg:rounded-none shadow-2xl lg:shadow-none
+        p-8 lg:p-0 rounded-t-[4rem] lg:rounded-none lg:shadow-none
         ${!image ? 'lg:opacity-10 lg:pointer-events-none' : 'lg:opacity-100'}
       `}
             style={{
@@ -58,7 +58,7 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
 
             <div className="flex-1 overflow-y-auto pr-2 space-y-12 scroll-smooth custom-scrollbar pb-10">
                 {activeTab === 'lens' && (
-                    <div className="space-y-10 animate-in fade-in duration-700">
+                    <div className="space-y-10 animate-in fade-in duration-700 silk-panel p-6 rounded-[3rem] border border-sienna/10 backdrop-blur-2xl">
                         <div className="flex justify-between items-center">
                             <h3 className="text-[11px] font-bold uppercase tracking-[0.4em] text-accent border-l-2 border-accent pl-4">Optical Dynamics</h3>
                             <div className="flex gap-2">
@@ -105,7 +105,7 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                 )}
 
                 {activeTab === 'palette' && (
-                    <div className="space-y-10 animate-in fade-in duration-700">
+                    <div className="space-y-10 animate-in fade-in duration-700 silk-panel p-6 lg:p-10 rounded-[3rem] border border-sienna/10 backdrop-blur-2xl">
                         <InspectorSection title="Pigment Extraction">
                             <p className="text-[12px] text-sienna/70 font-light italic leading-relaxed mb-8">Sampled hues from your vision to aid physical paint mixing and selection.</p>
                             <div className="grid grid-cols-4 gap-4">

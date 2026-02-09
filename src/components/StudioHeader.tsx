@@ -1,5 +1,18 @@
 import React from 'react';
-import { Moon, Sun, X, Camera, Settings2, ChevronLeft as BackIcon } from 'lucide-react';
+import {
+    Moon,
+    Sun,
+    X,
+    Camera,
+    Settings2,
+    ChevronLeft as BackIcon,
+    Zap,
+    ZapOff,
+    Grid3X3,
+    FlipHorizontal,
+    RefreshCw,
+    Maximize
+} from 'lucide-react';
 
 interface StudioHeaderProps {
     theme: 'light' | 'dark';
@@ -12,15 +25,28 @@ interface StudioHeaderProps {
     handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
     isSidebarOpen: boolean;
     setIsSidebarOpen: (open: boolean) => void;
+    settings: any;
+    setSettings: any;
+    mirror: boolean;
+    setMirror: (v: boolean) => void;
+    retryCamera: () => void;
 }
 
 const StudioHeader: React.FC<StudioHeaderProps> = ({
     theme, toggleTheme, onBack, showCamera, setShowCamera, image,
-    fileInputRef, handleFileUpload, isSidebarOpen, setIsSidebarOpen
+    fileInputRef, handleFileUpload,
+    isSidebarOpen, setIsSidebarOpen, settings, setSettings, mirror, setMirror, retryCamera
 }) => {
+    const [isToolsOpen, setIsToolsOpen] = React.useState(false);
+
+    const toggleTool = (fn: () => void) => {
+        fn();
+        if (window.navigator.vibrate) window.navigator.vibrate(10);
+    };
+
     return (
         <nav
-            className="w-full px-4 lg:px-12 flex justify-between items-center z-[60] shrink-0 silk-panel border-0 border-b border-sienna/20 shadow-sm"
+            className="w-full px-4 lg:px-12 flex justify-between items-center z-[1060] shrink-0 silk-panel border-0 border-b border-sienna/20 shadow-sm"
             style={{
                 height: 'var(--hdr-h)',
                 paddingTop: 'var(--safe-top)'
@@ -42,7 +68,7 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 lg:gap-6">
+            <div className="flex items-center gap-2 lg:gap-4 relative">
                 <button
                     onClick={toggleTheme}
                     className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full bg-sienna/5 hover:bg-sienna/10 transition-all text-sienna/80 hover:text-accent border border-sienna/10"
@@ -54,25 +80,73 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 
                 {image && (
-                    <button
-                        onClick={() => setShowCamera(!showCamera)}
-                        className={`px-6 lg:px-10 h-12 lg:h-14 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all flex items-center gap-3 shadow-xl active:scale-95 ${showCamera ? 'bg-accent text-sienna dark:text-white glow-on-hover' : 'bg-sienna text-cream'}`}
-                    >
-                        {showCamera ? <X className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-                        <span className="hidden sm:inline">{showCamera ? 'Cease Projection' : 'Launch Lens'}</span>
-                        <span className="sm:hidden">{showCamera ? 'Close' : 'AR'}</span>
-                    </button>
+                    <div className="flex items-center bg-sienna/5 p-1 rounded-full border border-sienna/10">
+                        <button
+                            onClick={() => setShowCamera(!showCamera)}
+                            className={`px-4 lg:px-8 h-10 lg:h-12 rounded-full text-[9px] font-bold uppercase tracking-[0.2em] transition-all flex items-center gap-2 shadow-sm ${showCamera ? 'bg-accent text-sienna dark:text-white' : 'bg-sienna text-cream'}`}
+                        >
+                            {showCamera ? <X className="w-3.5 h-3.5" /> : <Camera className="w-3.5 h-3.5" />}
+                            <span className="hidden sm:inline">{showCamera ? 'Cease' : 'Launch'}</span>
+                        </button>
+
+                        <button
+                            onClick={() => setIsToolsOpen(!isToolsOpen)}
+                            className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full transition-all ${isToolsOpen ? 'text-accent' : 'text-sienna/60'}`}
+                        >
+                            <Settings2 className={`w-5 h-5 transition-transform duration-500 ${isToolsOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                    </div>
+                )}
+
+                {/* Transparent Tools Dropdown */}
+                {isToolsOpen && (
+                    <div className="absolute top-full right-0 mt-4 p-2 silk-panel rounded-3xl border border-sienna/10 shadow-2xl flex flex-col gap-1 animate-in slide-in-from-top-4 duration-300 min-w-[140px]">
+                        <HeaderTool
+                            active={settings.torchOn}
+                            onClick={() => { toggleTool(() => setSettings((s: any) => ({ ...s, torchOn: !s.torchOn }))); }}
+                            label="Flash"
+                            icon={settings.torchOn ? <Zap /> : <ZapOff />}
+                        />
+                        <HeaderTool
+                            active={settings.showGrid}
+                            onClick={() => { toggleTool(() => setSettings((s: any) => ({ ...s, showGrid: !s.showGrid }))); }}
+                            label="Grid Overlay"
+                            icon={<Grid3X3 className="w-4 h-4" />}
+                        />
+                        <HeaderTool
+                            active={mirror}
+                            onClick={() => { toggleTool(() => setMirror(!mirror)); }}
+                            label="Mirror View"
+                            icon={<FlipHorizontal className="w-4 h-4" />}
+                        />
+                        <HeaderTool
+                            active={false}
+                            onClick={() => { toggleTool(retryCamera); setIsToolsOpen(false); }}
+                            label="Relens Hardware"
+                            icon={<RefreshCw className="w-4 h-4" />}
+                        />
+                    </div>
                 )}
 
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className={`lg:hidden w-12 h-12 flex items-center justify-center rounded-full border border-sienna/20 transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white' : 'bg-white/40 shadow-sm'}`}
+                    className={`w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full border border-sienna/20 transition-all ${isSidebarOpen ? 'bg-accent text-sienna dark:text-white' : 'bg-white/40 shadow-sm'}`}
                 >
-                    <Settings2 className="w-5 h-5" />
+                    <Maximize className="w-4 h-4" />
                 </button>
             </div>
         </nav>
     );
 };
+
+const HeaderTool = ({ active, onClick, label, icon }: any) => (
+    <button
+        onClick={onClick}
+        className={`flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all font-bold text-[9px] uppercase tracking-widest ${active ? 'bg-accent/20 text-accent' : 'text-sienna/70 hover:bg-sienna/5'}`}
+    >
+        {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
+        {label}
+    </button>
+);
 
 export default StudioHeader;

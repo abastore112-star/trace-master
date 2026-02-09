@@ -249,6 +249,11 @@ const App: React.FC = () => {
         handleFileUpload={handleFileUpload}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
+        settings={settings}
+        setSettings={setSettings}
+        mirror={mirror}
+        setMirror={setMirror}
+        retryCamera={retryCamera}
       />
 
       <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
