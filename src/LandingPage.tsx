@@ -67,28 +67,62 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, onShow
 
           <button
             onClick={onStart}
-            className="px-8 py-3 bg-sienna text-cream border border-sienna/10 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-accent hover:text-sienna dark:hover:text-white transition-all shadow-xl"
+            className="hidden md:flex px-8 py-3 bg-sienna text-cream border border-sienna/10 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-accent hover:text-sienna dark:hover:text-white transition-all shadow-xl"
           >
             Studio
           </button>
 
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-3 text-sienna/90"
+            className="md:hidden p-3 w-12 h-12 rounded-full bg-sienna/5 flex items-center justify-center text-sienna/90"
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Cinematic Mobile Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-[90] bg-cream flex flex-col items-center justify-center p-10 space-y-10 animate-in fade-in duration-500">
-          <a href="#philosophy" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Philosophy</a>
-          <a href="#atelier" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Atelier</a>
-          <button onClick={() => { onShowGallery(); setIsMenuOpen(false); }} className="text-4xl font-light italic hover:text-accent transition-colors">Art Library</button>
-          <a href="#reactions" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Reactions</a>
-          <button onClick={() => { onStart(); setIsMenuOpen(false); }} className="text-4xl font-bold uppercase tracking-[0.2em] text-accent">Studio</button>
+        <div className="fixed inset-0 z-[200] bg-cream/98 backdrop-blur-2xl flex flex-col items-center justify-center p-10 space-y-8 animate-in fade-in zoom-in duration-500 md:hidden">
+          <button
+            onClick={() => setIsMenuOpen(false)}
+            className="absolute top-8 right-8 p-4 w-14 h-14 rounded-full bg-sienna/5 flex items-center justify-center text-sienna"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          <div className="flex flex-col items-center space-y-8 w-full max-w-sm">
+            <div className="text-center mb-4">
+              <span className="text-[10px] uppercase font-bold tracking-[0.5em] text-accent">Navigation</span>
+            </div>
+
+            <button
+              onClick={() => { onShowGallery(); setIsMenuOpen(false); }}
+              className="group w-full flex flex-col items-center space-y-2 p-6 rounded-[2rem] bg-white/40 border border-sienna/5 active:scale-95 transition-all"
+            >
+              <span className="text-4xl font-light italic text-sienna">Art Library</span>
+              <span className="text-[9px] uppercase tracking-widest text-accent font-bold">The Archive</span>
+            </button>
+
+            <button
+              onClick={() => { onStart(); setIsMenuOpen(false); }}
+              className="group w-full flex flex-col items-center space-y-2 p-6 rounded-[2rem] bg-sienna text-cream active:scale-95 transition-all shadow-2xl"
+            >
+              <span className="text-4xl font-light italic">AR Studio</span>
+              <span className="text-[9px] uppercase tracking-widest text-accent font-bold">Enter the Atelier</span>
+            </button>
+
+            <div className="grid grid-cols-1 w-full gap-4 pt-4">
+              <a href="#philosophy" onClick={() => setIsMenuOpen(false)} className="text-center py-4 text-lg font-bold uppercase tracking-widest text-sienna/60 border-b border-sienna/5">Philosophy</a>
+              <a href="#atelier" onClick={() => setIsMenuOpen(false)} className="text-center py-4 text-lg font-bold uppercase tracking-widest text-sienna/60 border-b border-sienna/5">Atelier</a>
+              <a href="#reactions" onClick={() => setIsMenuOpen(false)} className="text-center py-4 text-lg font-bold uppercase tracking-widest text-sienna/60 border-b border-sienna/5">Reactions</a>
+            </div>
+          </div>
+
+          <div className="absolute bottom-12 flex items-center gap-4 opacity-40">
+            <Frame className="w-5 h-5" />
+            <span className="text-[9px] uppercase tracking-[0.4em] font-bold">TraceMaster Studio</span>
+          </div>
         </div>
       )}
 
