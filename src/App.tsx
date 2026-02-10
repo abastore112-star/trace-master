@@ -4,6 +4,7 @@ import CameraOverlay from './components/CameraOverlay';
 import LandingPage from './LandingPage';
 import StudioHeader from './components/StudioHeader';
 import StudioSidebar from './components/StudioSidebar';
+import Gallery from './components/Gallery';
 import { HUD } from './components/HUD';
 import { applyFilters, extractPalette, analyzeImageForPresets, applyAutoTransparency, magicEraser } from './utils/imageProcessing';
 import { ProcessingOptions, TransformState, AppSettings } from './types/types';
@@ -89,6 +90,7 @@ const App: React.FC = () => {
   const [isAutoTuning, setIsAutoTuning] = useState(false);
   const [eraserMode, setEraserMode] = useState(false);
   const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   const [pendingUpload, setPendingUpload] = useState<{ img: HTMLImageElement, base64: string } | null>(null);
 
   const [options, setOptions] = useState<ProcessingOptions>({
@@ -167,6 +169,63 @@ const App: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleGallerySelect = (url: string) => {
+    setIsAutoTuning(true);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      setOriginalBase64(url);
+      setImage(img);
+      setPalette(extractPalette(img));
+
+      const screenWidth = window.innerWidth * 0.8;
+      const screenHeight = window.innerHeight * 0.8;
+      const imgWidth = img.naturalWidth;
+      const imgHeight = img.naturalHeight;
+      const scaleX = screenWidth / imgWidth;
+      const scaleY = screenHeight / imgHeight;
+      const initialScale = Math.min(scaleX, scaleY, 1.0);
+
+      setTransform({
+        scale: parseFloat(initialScale.toFixed(2)),
+        x: 0,
+        y: 0,
+        rotation: 0
+      });
+
+      const presets = analyzeImageForPresets(img);
+      const finalOptions = {
+        ...options,
+        ...presets,
+        isPerfectSketch: true // Always perfect from gallery
+      } as ProcessingOptions;
+
+      setOptions(finalOptions);
+
+      // Handle transparency
+      if (hiddenCanvasRef.current) {
+        setTimeout(() => {
+          if (hiddenCanvasRef.current) {
+            applyAutoTransparency(hiddenCanvasRef.current);
+            const transparentCanvas = document.createElement('canvas');
+            transparentCanvas.width = hiddenCanvasRef.current.width;
+            transparentCanvas.height = hiddenCanvasRef.current.height;
+            transparentCanvas.getContext('2d')?.drawImage(hiddenCanvasRef.current, 0, 0);
+            setSketchCanvas(transparentCanvas);
+            setIsAutoTuning(false);
+          }
+        }, 100);
+      }
+
+      setShowGallery(false);
+      setView('studio');
+      setIsSidebarOpen(false);
+      setTimeout(() => setIsAutoTuning(false), 1200);
+      if (window.navigator.vibrate) window.navigator.vibrate(40);
+    };
+    img.src = url;
   };
 
   const onSelectType = (isML: boolean) => {
@@ -391,7 +450,6 @@ const App: React.FC = () => {
       startY: y,
       tolerance: 60
     };
-
     processWorkerRequest(image, eraseOptions);
     if (window.navigator.vibrate) window.navigator.vibrate(20);
   };
@@ -401,6 +459,7 @@ const App: React.FC = () => {
       <LandingPage
         onStart={() => setView('studio')}
         onFileUpload={handleFileUpload}
+        onShowGallery={() => setShowGallery(true)}
         fileInputRef={fileInputRef}
         toggleTheme={toggleTheme}
         theme={theme}
@@ -477,6 +536,7 @@ const App: React.FC = () => {
         setMirror={setMirror}
         retryCamera={retryCamera}
         visible={showCamera ? uiVisible : true}
+        onShowGallery={() => setShowGallery(true)}
       />
 
       <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
@@ -557,6 +617,14 @@ const App: React.FC = () => {
       </div>
 
       <canvas ref={hiddenCanvasRef} className="hidden" />
+
+      {/* Gallery V2 */}
+      {showGallery && (
+        <Gallery
+          onSelect={handleGallerySelect}
+          onClose={() => setShowGallery(false)}
+        />
+      )}
 
       {/* Upload Selection Modal */}
       {selectionModalOpen && (

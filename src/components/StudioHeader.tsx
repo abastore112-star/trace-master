@@ -11,7 +11,8 @@ import {
     Grid3X3,
     FlipHorizontal,
     RefreshCw,
-    Sliders
+    Sliders,
+    Library
 } from 'lucide-react';
 
 interface StudioHeaderProps {
@@ -31,12 +32,14 @@ interface StudioHeaderProps {
     setMirror: (v: boolean) => void;
     retryCamera: () => void;
     visible: boolean;
+    onShowGallery: () => void;
 }
 
 const StudioHeader: React.FC<StudioHeaderProps> = ({
     theme, toggleTheme, onBack, showCamera, setShowCamera, image,
     fileInputRef, handleFileUpload,
-    isSidebarOpen, setIsSidebarOpen, settings, setSettings, mirror, setMirror, retryCamera, visible
+    isSidebarOpen, setIsSidebarOpen, settings, setSettings, mirror, setMirror, retryCamera, visible,
+    onShowGallery
 }) => {
     const [isToolsOpen, setIsToolsOpen] = React.useState(false);
 
@@ -76,6 +79,14 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
                     title="Toggle Theme"
                 >
                     {theme === 'light' ? <Moon className="w-4 h-4 lg:w-5 lg:h-5" /> : <Sun className="w-4 h-4 lg:w-5 lg:h-5" />}
+                </button>
+
+                <button
+                    onClick={onShowGallery}
+                    className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full bg-accent/10 hover:bg-accent hover:text-white transition-all text-accent border border-accent/20"
+                    title="Art Library"
+                >
+                    <Library className="w-4 h-4 lg:w-5 lg:h-5" />
                 </button>
 
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />

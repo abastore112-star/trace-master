@@ -9,12 +9,13 @@ import {
 interface LandingPageProps {
   onStart: () => void;
   onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onShowGallery: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   toggleTheme: () => void;
   theme: 'light' | 'dark';
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileInputRef, toggleTheme, theme }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, onShowGallery, fileInputRef, toggleTheme, theme }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -46,6 +47,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
         <div className="hidden md:flex items-center gap-12 text-[11px] font-bold uppercase tracking-[0.2em]">
           <a href="#philosophy" className="text-sienna/80 hover:text-accent transition-all hover:tracking-[0.3em]">Philosophy</a>
           <a href="#atelier" className="text-sienna/80 hover:text-accent transition-all hover:tracking-[0.3em]">Atelier</a>
+          <button
+            onClick={onShowGallery}
+            className="text-sienna/80 hover:text-accent transition-all hover:tracking-[0.3em] font-bold uppercase"
+          >
+            Art Library
+          </button>
           <a href="#reactions" className="text-sienna/80 hover:text-accent transition-all hover:tracking-[0.3em]">Reactions</a>
         </div>
 
@@ -78,7 +85,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, fileIn
       {isMenuOpen && (
         <div className="fixed inset-0 z-[90] bg-cream flex flex-col items-center justify-center p-10 space-y-10 animate-in fade-in duration-500">
           <a href="#philosophy" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Philosophy</a>
-          <a href="#atelier" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">The Atelier</a>
+          <a href="#atelier" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Atelier</a>
+          <button onClick={() => { onShowGallery(); setIsMenuOpen(false); }} className="text-4xl font-light italic hover:text-accent transition-colors">Art Library</button>
           <a href="#reactions" onClick={() => setIsMenuOpen(false)} className="text-4xl font-light italic hover:text-accent transition-colors">Reactions</a>
           <button onClick={() => { onStart(); setIsMenuOpen(false); }} className="text-4xl font-bold uppercase tracking-[0.2em] text-accent">Studio</button>
         </div>
