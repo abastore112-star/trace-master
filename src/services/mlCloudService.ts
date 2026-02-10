@@ -49,19 +49,42 @@ class MLCloudService {
         }
     }
 
+    private isProcessing = false;
+    private lastRequestTime = 0;
+    private readonly COOLDOWN_MS = 2000;
+    private requestQueue: Promise<any> = Promise.resolve();
+
     public async processImage(
         canvas: HTMLCanvasElement,
         modelType: 'anime' | 'realistic' = 'anime',
         outputFormat: 'webp' | 'svg' = 'webp'
+    ): Promise<{ image: string; svg?: string } | null> {
+        // Wrap the logic in a queue to ensure serial execution
+        return this.requestQueue = this.requestQueue.then(async () => {
+            return this.executeWithRetry(canvas, modelType, outputFormat);
+        });
+    }
+
+    private async executeWithRetry(
+        canvas: HTMLCanvasElement,
+        modelType: 'anime' | 'realistic',
+        outputFormat: 'webp' | 'svg',
+        retryCount = 0
     ): Promise<{ image: string; svg?: string } | null> {
         if (!this.spaceUrl) {
             console.error('MLCloudService: No Cloud URL configured');
             return null;
         }
 
+        // 1. Enforce Cooldown
+        const now = Date.now();
+        const timeSinceLast = now - this.lastRequestTime;
+        if (timeSinceLast < this.COOLDOWN_MS) {
+            await new Promise(resolve => setTimeout(resolve, this.COOLDOWN_MS - timeSinceLast));
+        }
+
         try {
-            // Ensure the canvas is prepared for readback
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            this.isProcessing = true;
 
             // Convert canvas to blob
             const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
@@ -72,7 +95,6 @@ class MLCloudService {
             formData.append('model_type', modelType);
             formData.append('output_format', outputFormat);
 
-            // Call the cloud API
             const endpoint = this.spaceUrl.endsWith('/') ? `${this.spaceUrl}process` : `${this.spaceUrl}/process`;
 
             const response = await fetch(endpoint, {
@@ -81,12 +103,21 @@ class MLCloudService {
                 body: formData
             });
 
+            // 2. Handle Throttling (429) or Service Unavailable (503)
+            if ((response.status === 429 || response.status === 503) && retryCount < 3) {
+                const backoffDelay = Math.pow(2, retryCount) * 1000;
+                console.warn(`MLCloudService: Server busy (${response.status}). Retrying in ${backoffDelay}ms... (Attempt ${retryCount + 1}/3)`);
+                await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                return this.executeWithRetry(canvas, modelType, outputFormat, retryCount + 1);
+            }
+
             if (!response.ok) {
                 const error = await response.text();
                 throw new Error(`Cloud Inference Failed: ${error}`);
             }
 
             const result = await response.json();
+            this.lastRequestTime = Date.now();
             return {
                 image: result.image,
                 svg: result.svg
@@ -94,6 +125,8 @@ class MLCloudService {
         } catch (err) {
             console.error('MLCloudService Error:', err);
             return null;
+        } finally {
+            this.isProcessing = false;
         }
     }
 }
