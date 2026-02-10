@@ -201,6 +201,30 @@
                     "title": "Anime Sketch 33",
                     "url": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_33.png",
                     "thumb": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_33.png"
+                },
+                {
+                    "id": "anime_34",
+                    "title": "Anime Sketch 34",
+                    "url": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_34.jpg",
+                    "thumb": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_34.jpg"
+                },
+                {
+                    "id": "anime_35",
+                    "title": "Anime Sketch 35",
+                    "url": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_35.png",
+                    "thumb": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_35.png"
+                },
+                {
+                    "id": "anime_36",
+                    "title": "Anime Sketch 36",
+                    "url": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_36.png",
+                    "thumb": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_36.png"
+                },
+                {
+                    "id": "anime_37",
+                    "title": "Anime Sketch 37",
+                    "url": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_37.png",
+                    "thumb": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_37.png"
                 }
             ]
         },
