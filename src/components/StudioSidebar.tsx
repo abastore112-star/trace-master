@@ -26,13 +26,18 @@ interface StudioSidebarProps {
     visible: boolean;
     eraserMode: boolean;
     setEraserMode: (v: boolean) => void;
+    isCloudHQ: boolean;
+    setIsCloudHQ: (v: boolean) => void;
+    cloudModel: 'anime' | 'realistic';
+    setCloudModel: (v: 'anime' | 'realistic') => void;
 }
 
 const StudioSidebar: React.FC<StudioSidebarProps> = ({
     image, isSidebarOpen, setIsSidebarOpen, activeTab, setActiveTab,
     options, setOptions, opacity, setOpacity, mirror, setMirror,
     transform, setTransform, palette, autoTuneManually, nudge,
-    settings, setSettings, deviceTier, visible, eraserMode, setEraserMode
+    settings, setSettings, deviceTier, visible, eraserMode, setEraserMode,
+    isCloudHQ, setIsCloudHQ, cloudModel, setCloudModel
 }) => {
     const [showAdvanced, setShowAdvanced] = React.useState(false);
 
@@ -91,14 +96,27 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                     >
                                         {showAdvanced ? 'Simple Mode' : 'Advanced Tuning'}
                                     </button>
-                                    <DisabledOverlayForSketch>
+                                    <div className="flex gap-2 items-center">
                                         <button
-                                            onClick={autoTuneManually}
-                                            className="flex items-center gap-2 px-4 py-2 bg-accent/20 rounded-full text-[9px] font-bold uppercase tracking-widest text-accent hover:bg-accent hover:text-sienna dark:hover:text-white transition-all glow-on-hover shadow-sm"
+                                            onClick={() => {
+                                                const newVal = !isCloudHQ;
+                                                setIsCloudHQ(newVal);
+                                                localStorage.setItem('tm_cloud_hq', String(newVal));
+                                            }}
+                                            className={`px-4 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${isCloudHQ ? 'bg-accent text-white shadow-lg' : 'bg-sienna/10 text-sienna/40'}`}
                                         >
-                                            <Sparkles className="w-3.5 h-3.5" /> High-Fidelity Scan
+                                            {isCloudHQ ? 'Cloud HQ On' : 'Cloud HQ Off'}
                                         </button>
-                                    </DisabledOverlayForSketch>
+
+                                        {isCloudHQ && (
+                                            <button
+                                                onClick={autoTuneManually}
+                                                className="flex items-center gap-2 px-4 py-2 bg-sienna text-cream rounded-full text-[9px] font-bold uppercase tracking-widest hover:bg-accent transition-all animate-in slide-in-from-left-2 duration-300"
+                                            >
+                                                <Sparkles className="w-3.5 h-3.5" /> Refine with AI
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -132,9 +150,34 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                             >
                                 <div className="grid grid-cols-1 gap-4">
                                     {showAdvanced && (
-                                        <DisabledOverlayForSketch>
-                                            <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>
-                                        </DisabledOverlayForSketch>
+                                        <>
+                                            <DisabledOverlayForSketch>
+                                                <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>
+                                            </DisabledOverlayForSketch>
+                                            <div className="flex flex-col gap-2 p-4 bg-sienna/5 rounded-3xl border border-sienna/10 animate-in fade-in slide-in-from-top-2 duration-500">
+                                                <label className="text-[9px] uppercase tracking-widest font-bold text-sienna/40 px-1">AI Engine Mode</label>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setCloudModel('realistic');
+                                                            localStorage.setItem('tm_cloud_model', 'realistic');
+                                                        }}
+                                                        className={`flex-1 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest transition-all ${cloudModel === 'realistic' ? 'bg-sienna text-cream shadow-lg' : 'bg-white/40 text-sienna/40 hover:bg-white/60'}`}
+                                                    >
+                                                        Realistic
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setCloudModel('anime');
+                                                            localStorage.setItem('tm_cloud_model', 'anime');
+                                                        }}
+                                                        className={`flex-1 py-3 rounded-2xl text-[9px] font-bold uppercase tracking-widest transition-all ${cloudModel === 'anime' ? 'bg-sienna text-cream shadow-lg' : 'bg-white/40 text-sienna/40 hover:bg-white/60'}`}
+                                                    >
+                                                        Anime
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
                                     )}
                                     <OptionToggle active={eraserMode} onClick={() => setEraserMode(!eraserMode)}>Magic Eraser</OptionToggle>
                                     <OptionToggle active={mirror} onClick={() => setMirror(!mirror)}>Mirror Projection</OptionToggle>

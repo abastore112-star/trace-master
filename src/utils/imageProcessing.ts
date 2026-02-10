@@ -282,3 +282,77 @@ export const magicEraser = (canvas: HTMLCanvasElement, startX: number, startY: n
 
   ctx.putImageData(imageData, 0, 0);
 };
+
+/**
+ * Specifically designed for Cloud HQ output (which often has gray/textured backgrounds).
+ * Distills only the strongest lines and makes everything else perfectly transparent.
+ */
+export const distillCloudLines = (canvas: HTMLCanvasElement) => {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return;
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const width = canvas.width;
+  const height = canvas.height;
+
+  // 1. More Robust Background Sampling
+  // Sample small grids in corners and center of edges
+  const samplePoints = [
+    { x: 10, y: 10 }, { x: width - 10, y: 10 },
+    { x: 10, y: height - 10 }, { x: width - 10, y: height - 10 },
+    { x: Math.floor(width / 2), y: 10 }, { x: Math.floor(width / 2), y: height - 10 }
+  ];
+
+  let bgR = 0, bgG = 0, bgB = 0;
+  let count = 0;
+
+  samplePoints.forEach(p => {
+    // Sample a 3x3 grid around each point
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = p.x + dx;
+        const y = p.y + dy;
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          const idx = (y * width + x) * 4;
+          bgR += data[idx];
+          bgG += data[idx + 1];
+          bgB += data[idx + 2];
+          count++;
+        }
+      }
+    }
+  });
+
+  bgR /= count;
+  bgG /= count;
+  bgB /= count;
+
+  // 2. Adaptive Extraction
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    // Euclidean distance
+    const diff = Math.sqrt(
+      Math.pow(r - bgR, 2) +
+      Math.pow(g - bgG, 2) +
+      Math.pow(b - bgB, 2)
+    );
+
+    // More sensitive threshold (25) to catch pencil strokes
+    if (diff > 25) {
+      // It's a line - Force to pure black for high-fidelity projection
+      data[i] = 0;
+      data[i + 1] = 0;
+      data[i + 2] = 0;
+      data[i + 3] = 255;
+    } else {
+      // It's background - make perfectly transparent
+      data[i + 3] = 0;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+};

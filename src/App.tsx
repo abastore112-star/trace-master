@@ -1,16 +1,81 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, ImageIcon, Lock, Unlock, Library } from 'lucide-react';
+import {
+  Camera,
+  Settings,
+  Library,
+  Image as ImageIcon,
+  Frame,
+  X,
+  ArrowLeft,
+  ChevronRight,
+  Sun,
+  Moon,
+  Trash2,
+  Download,
+  Share2,
+  Target,
+  Maximize2,
+  HandMetal,
+  Eraser,
+  Sparkles,
+  Globe,
+  Lock,
+  Unlock
+} from 'lucide-react';
 import CameraOverlay from './components/CameraOverlay';
 import LandingPage from './LandingPage';
 import StudioHeader from './components/StudioHeader';
 import StudioSidebar from './components/StudioSidebar';
 import Gallery from './components/Gallery';
 import { HUD } from './components/HUD';
-import { applyFilters, extractPalette, analyzeImageForPresets, applyAutoTransparency, magicEraser } from './utils/imageProcessing';
+import { applyFilters, extractPalette, analyzeImageForPresets, applyAutoTransparency, magicEraser, distillCloudLines } from './utils/imageProcessing';
 import { ProcessingOptions, TransformState, AppSettings } from './types/types';
 import { useTheme } from './utils/useTheme';
 import { getDeviceTier, getTierScale, DeviceInfo } from './utils/deviceInfo';
-import { initModel, extractNaturalSketch } from './services/mlVisionService';
+import { mlCloudService } from './services/mlCloudService';
+
+const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }> = ({ progress, onCancel }) => {
+  return (
+    <div className="fixed inset-0 z-[5000] flex flex-col items-center justify-center bg-cream/80 backdrop-blur-3xl animate-in fade-in duration-1000">
+      <div className="relative w-80 h-80 flex items-center justify-center">
+        {/* Cinematic Rings */}
+        <div className="absolute inset-0 border-2 border-accent/10 rounded-full animate-ping duration-[3000ms]" />
+        <div className="absolute inset-4 border border-accent/20 rounded-full animate-spin-slow" />
+        <div className="absolute inset-8 border-2 border-accent/5 rounded-full animate-reverse-spin" />
+
+        {/* Percentage Display */}
+        <div className="relative flex flex-col items-center">
+          <span className="text-7xl font-light italic text-sienna tabular-nums">{Math.round(progress)}%</span>
+          <div className="w-12 h-1 bg-accent/20 rounded-full mt-4 overflow-hidden">
+            <div
+              className="h-full bg-accent transition-all duration-700 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-12 text-center space-y-8">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 text-accent justify-center">
+            <Globe className="w-5 h-5 animate-pulse" />
+            <h3 className="text-xl font-bold uppercase tracking-[0.4em]">Atelier Cloud</h3>
+          </div>
+          <p className="text-[10px] text-sienna/60 uppercase tracking-[0.6em] font-medium animate-pulse">
+            Distilling high-fidelity line art...
+          </p>
+        </div>
+
+        <button
+          onClick={onCancel}
+          className="px-8 py-3 bg-sienna/5 hover:bg-sienna/10 text-sienna/40 hover:text-sienna text-[9px] font-bold uppercase tracking-widest rounded-full transition-all border border-sienna/10"
+        >
+          Cancel Processing
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const SketchPreview: React.FC<{
   sketchCanvas: HTMLCanvasElement | null,
@@ -22,7 +87,7 @@ const SketchPreview: React.FC<{
 
   useEffect(() => {
     if (sketchCanvas && canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
+      const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
       if (ctx) {
         canvasRef.current.width = sketchCanvas.width;
         canvasRef.current.height = sketchCanvas.height;
@@ -91,7 +156,14 @@ const App: React.FC = () => {
   const [eraserMode, setEraserMode] = useState(false);
   const [selectionModalOpen, setSelectionModalOpen] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
+  const [isCloudHQ, setIsCloudHQ] = useState(() => localStorage.getItem('tm_cloud_hq') === 'true');
+  const [cloudUrl, setCloudUrl] = useState(() => localStorage.getItem('tm_cloud_url') || '');
+  const [cloudModel, setCloudModel] = useState<'anime' | 'realistic'>(() => (localStorage.getItem('tm_cloud_model') as 'anime' | 'realistic') || 'realistic');
+  const [showSettings, setShowSettings] = useState(false);
+  const [isCloudProcessing, setIsCloudProcessing] = useState(false);
   const [pendingUpload, setPendingUpload] = useState<{ img: HTMLImageElement, base64: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [processedImage, setProcessedImage] = useState<string | null>(null);
 
   const [options, setOptions] = useState<ProcessingOptions>({
     threshold: 45,
@@ -116,9 +188,15 @@ const App: React.FC = () => {
     showReference: false,
     lockWake: true
   });
+  const [cloudProgress, setCloudProgress] = useState(0);
 
   const [deviceInfo] = useState<DeviceInfo>(getDeviceTier());
   const tierScale = getTierScale(deviceInfo.tier);
+
+  const handleCancelCloudProcessing = useCallback(() => {
+    setIsCloudProcessing(false);
+    setIsLoading(false);
+  }, []);
 
   const [uiVisible, setUiVisible] = useState(true);
   const uiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -132,8 +210,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    initModel(); // Initialize ML model on mount
-  }, []);
+    mlCloudService.setConfig(cloudUrl); // Initialize cloud service with stored URL
+  }, [cloudUrl]);
 
   useEffect(() => {
     if (view === 'studio') {
@@ -153,82 +231,230 @@ const App: React.FC = () => {
   const isProcessingRef = useRef(false);
   const nextUpdateRef = useRef<{ img: HTMLImageElement, opts: ProcessingOptions } | null>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setIsLoading(true);
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const base64 = e.target?.result as string;
+
+        // If Cloud HQ is enabled, process via cloud
+        if (isCloudHQ && cloudUrl) {
+          setIsCloudProcessing(true);
+          try {
+            // Create a temp canvas to hold the image
+            const img = new Image();
+            img.src = base64;
+            await new Promise((resolve) => img.onload = resolve);
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            if (tempCtx) {
+              tempCtx.drawImage(img, 0, 0);
+
+              // Start perceptual progress
+              setCloudProgress(0);
+              const progressInterval = setInterval(() => {
+                setCloudProgress(prev => {
+                  if (prev >= 92) return prev; // Stall near end until actually done
+                  return prev + (Math.random() * 5);
+                });
+              }, 400);
+
+              const cloudResult = await mlCloudService.processImage(tempCanvas, cloudModel);
+              clearInterval(progressInterval);
+              setCloudProgress(100);
+
+              if (cloudResult && cloudResult.image) {
+                // Post-process the cloud result to fix gray background
+                const resultImg = new Image();
+                resultImg.src = cloudResult.image;
+                await new Promise((resolve, reject) => {
+                  resultImg.onload = resolve;
+                  resultImg.onerror = reject;
+                });
+
+                const distillCanvas = document.createElement('canvas');
+                distillCanvas.width = resultImg.width;
+                distillCanvas.height = resultImg.height;
+                const dCtx = distillCanvas.getContext('2d', { willReadFrequently: true });
+                if (dCtx) {
+                  dCtx.drawImage(resultImg, 0, 0);
+                  distillCloudLines(distillCanvas); // STRIP GRAY BACKGROUND
+                  const finalResult = distillCanvas.toDataURL('image/png');
+
+                  setImage(img);
+                  setProcessedImage(finalResult);
+                  setOriginalBase64(base64);
+                  setView('studio');
+                  setIsLoading(false);
+                  setTimeout(() => setIsCloudProcessing(false), 500);
+                  if (window.navigator.vibrate) window.navigator.vibrate(40);
+                  return;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Cloud processing failed, falling back to local:', err);
+          } finally {
+            setIsCloudProcessing(false);
+          }
+        }
+
+        // Local processing fallback
         const img = new Image();
-        img.onload = () => {
-          setPendingUpload({ img, base64 });
-          setSelectionModalOpen(true);
-          if (window.navigator.vibrate) window.navigator.vibrate(40);
-        };
         img.src = base64;
+        await new Promise((resolve) => img.onload = resolve);
+        setPendingUpload({ img, base64 });
+        setSelectionModalOpen(true);
+        setIsLoading(false);
+        if (window.navigator.vibrate) window.navigator.vibrate(40);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleGallerySelect = (url: string) => {
-    setIsAutoTuning(true);
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      setOriginalBase64(url);
-      setImage(img);
-      setPalette(extractPalette(img));
+  const handleGallerySelect = async (asset: { url: string; id: string }) => {
+    setIsLoading(true);
+    setShowGallery(false);
 
-      const screenWidth = window.innerWidth * 0.8;
-      const screenHeight = window.innerHeight * 0.8;
-      const imgWidth = img.naturalWidth;
-      const imgHeight = img.naturalHeight;
-      const scaleX = screenWidth / imgWidth;
-      const scaleY = screenHeight / imgHeight;
-      const initialScale = Math.min(scaleX, scaleY, 1.0);
+    // Convert relative/absolute URL to base64 for processing
+    try {
+      const response = await fetch(asset.url);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
 
-      setTransform({
-        scale: parseFloat(initialScale.toFixed(2)),
-        x: 0,
-        y: 0,
-        rotation: 0
-      });
+        // If Cloud HQ is enabled
+        if (isCloudHQ && cloudUrl) {
+          setIsCloudProcessing(true);
+          try {
+            const img = new Image();
+            img.src = base64;
+            await new Promise((resolve) => img.onload = resolve);
 
-      const presets = analyzeImageForPresets(img);
-      const finalOptions = {
-        ...options,
-        ...presets,
-        isPerfectSketch: true // Always perfect from gallery
-      } as ProcessingOptions;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            if (tempCtx) {
+              tempCtx.drawImage(img, 0, 0);
 
-      setOptions(finalOptions);
+              // Start perceptual progress
+              setCloudProgress(0);
+              const progressInterval = setInterval(() => {
+                setCloudProgress(prev => {
+                  if (prev >= 92) return prev;
+                  return prev + (Math.random() * 5);
+                });
+              }, 400);
 
-      // Handle transparency
-      if (hiddenCanvasRef.current) {
-        setTimeout(() => {
-          if (hiddenCanvasRef.current) {
-            applyAutoTransparency(hiddenCanvasRef.current);
-            const transparentCanvas = document.createElement('canvas');
-            transparentCanvas.width = hiddenCanvasRef.current.width;
-            transparentCanvas.height = hiddenCanvasRef.current.height;
-            transparentCanvas.getContext('2d')?.drawImage(hiddenCanvasRef.current, 0, 0);
-            setSketchCanvas(transparentCanvas);
-            setIsAutoTuning(false);
+              const cloudResult = await mlCloudService.processImage(tempCanvas, cloudModel);
+              clearInterval(progressInterval);
+              setCloudProgress(100);
+
+              if (cloudResult && cloudResult.image) {
+                const resultImg = new Image();
+                resultImg.src = cloudResult.image;
+                await new Promise((resolve, reject) => {
+                  resultImg.onload = resolve;
+                  resultImg.onerror = reject;
+                });
+
+                const distillCanvas = document.createElement('canvas');
+                distillCanvas.width = resultImg.width;
+                distillCanvas.height = resultImg.height;
+                const dCtx = distillCanvas.getContext('2d', { willReadFrequently: true });
+                if (dCtx) {
+                  dCtx.drawImage(resultImg, 0, 0);
+                  distillCloudLines(distillCanvas); // STRIP GRAY BACKGROUND
+                  const finalResult = distillCanvas.toDataURL('image/png');
+
+                  setImage(img);
+                  setProcessedImage(finalResult);
+                  setOriginalBase64(base64);
+                  setView('studio');
+                  setIsLoading(false);
+                  setTimeout(() => setIsCloudProcessing(false), 500);
+                  if (window.navigator.vibrate) window.navigator.vibrate(40);
+                  return;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Cloud processing failed:', err);
+          } finally {
+            setIsCloudProcessing(false);
           }
-        }, 100);
-      }
+        }
 
-      setShowGallery(false);
-      setView('studio');
-      setIsSidebarOpen(false);
-      setTimeout(() => setIsAutoTuning(false), 1200);
-      if (window.navigator.vibrate) window.navigator.vibrate(40);
-    };
-    img.src = url;
+        // Local processing fallback
+        const img = new Image();
+        img.src = base64;
+        await new Promise((resolve) => img.onload = resolve);
+
+        setOriginalBase64(base64);
+        setImage(img);
+        setPalette(extractPalette(img));
+
+        const screenWidth = window.innerWidth * 0.8;
+        const screenHeight = window.innerHeight * 0.8;
+        const imgWidth = img.naturalWidth;
+        const imgHeight = img.naturalHeight;
+        const scaleX = screenWidth / imgWidth;
+        const scaleY = screenHeight / imgHeight;
+        const initialScale = Math.min(scaleX, scaleY, 1.0);
+
+        setTransform({
+          scale: parseFloat(initialScale.toFixed(2)),
+          x: 0,
+          y: 0,
+          rotation: 0
+        });
+
+        const presets = analyzeImageForPresets(img);
+        const finalOptions = {
+          ...options,
+          ...presets,
+          isPerfectSketch: true // Always perfect from gallery
+        } as ProcessingOptions;
+
+        setOptions(finalOptions);
+
+        // Handle transparency
+        if (hiddenCanvasRef.current) {
+          setTimeout(() => {
+            const currentHCanvas = hiddenCanvasRef.current;
+            if (currentHCanvas) {
+              applyAutoTransparency(currentHCanvas);
+              const transparentCanvas = document.createElement('canvas');
+              transparentCanvas.width = currentHCanvas.width;
+              transparentCanvas.height = currentHCanvas.height;
+              transparentCanvas.getContext('2d', { willReadFrequently: true })?.drawImage(currentHCanvas, 0, 0);
+              setSketchCanvas(transparentCanvas);
+              setIsAutoTuning(false);
+            }
+          }, 100);
+        }
+
+        setView('studio');
+        setIsSidebarOpen(false);
+        setTimeout(() => setIsAutoTuning(false), 1200);
+        if (window.navigator.vibrate) window.navigator.vibrate(40);
+        setIsLoading(false);
+      };
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      console.error('Failed to load gallery asset:', err);
+      setIsLoading(false);
+    }
   };
 
-  const onSelectType = (isML: boolean) => {
+  const onSelectType = async (isML: boolean) => {
     if (!pendingUpload) return;
     const { img, base64 } = pendingUpload;
 
@@ -272,7 +498,7 @@ const App: React.FC = () => {
             const transparentCanvas = document.createElement('canvas');
             transparentCanvas.width = hiddenCanvasRef.current.width;
             transparentCanvas.height = hiddenCanvasRef.current.height;
-            transparentCanvas.getContext('2d')?.drawImage(hiddenCanvasRef.current, 0, 0);
+            transparentCanvas.getContext('2d', { willReadFrequently: true })?.drawImage(hiddenCanvasRef.current, 0, 0);
             setSketchCanvas(transparentCanvas);
             setIsAutoTuning(false);
           }
@@ -319,7 +545,7 @@ const App: React.FC = () => {
 
     const imageData = hCtx.getImageData(0, 0, w, h);
     workerRef.current.postMessage({ imageData, options: opts }, [imageData.data.buffer]);
-  }, []);
+  }, [tierScale.maxDim]);
 
   // Initialize Worker
   useEffect(() => {
@@ -329,12 +555,12 @@ const App: React.FC = () => {
       const { imageData } = e.data;
       if (hiddenCanvasRef.current) {
         const hCanvas = hiddenCanvasRef.current;
-        hCanvas.getContext('2d')?.putImageData(imageData, 0, 0);
+        hCanvas.getContext('2d', { willReadFrequently: true })?.putImageData(imageData, 0, 0);
 
         const newCanvas = document.createElement('canvas');
         newCanvas.width = hCanvas.width;
         newCanvas.height = hCanvas.height;
-        const nCtx = newCanvas.getContext('2d');
+        const nCtx = newCanvas.getContext('2d', { willReadFrequently: true });
         if (nCtx) {
           nCtx.drawImage(hCanvas, 0, 0);
           setSketchCanvas(newCanvas);
@@ -367,8 +593,22 @@ const App: React.FC = () => {
   }, [processWorkerRequest, tierScale.workerDebounce]);
 
   useEffect(() => {
-    if (image) updateSketch(image, options);
-  }, [image, options, updateSketch]);
+    if (processedImage) {
+      // If cloud processed image exists, use it directly for sketchCanvas
+      const img = new Image();
+      img.src = processedImage;
+      img.onload = () => {
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = img.naturalWidth;
+        newCanvas.height = img.naturalHeight;
+        newCanvas.getContext('2d', { willReadFrequently: true })?.drawImage(img, 0, 0);
+        setSketchCanvas(newCanvas);
+      };
+    } else if (image) {
+      // Otherwise, use local processing
+      updateSketch(image, options);
+    }
+  }, [image, options, updateSketch, processedImage]);
 
   const resetTransform = useCallback(() => {
     if (!image) return;
@@ -402,40 +642,61 @@ const App: React.FC = () => {
 
   const autoTuneManually = async (targetImg?: HTMLImageElement) => {
     const activeImg = targetImg || image;
-    if (!activeImg || !hiddenCanvasRef.current) return;
-    setIsAutoTuning(true);
+    if (!activeImg || !hiddenCanvasRef.current || !cloudUrl) return;
+
+    setIsCloudProcessing(true);
+    setIsLoading(true);
 
     try {
-      // Draw to hidden canvas first if we are processing a new image
       const hCanvas = hiddenCanvasRef.current;
-      const hCtx = hCanvas.getContext('2d');
+      const hCtx = hCanvas.getContext('2d', { willReadFrequently: true });
       if (hCtx) {
         hCanvas.width = activeImg.naturalWidth;
         hCanvas.height = activeImg.naturalHeight;
         hCtx.drawImage(activeImg, 0, 0);
       }
 
-      // Phase 2: ML-Powered Natural Sketch Extraction
-      const mlResult = await extractNaturalSketch(hCanvas);
-      if (mlResult) {
-        const mlCanvas = document.createElement('canvas');
-        mlCanvas.width = mlResult.width;
-        mlCanvas.height = mlResult.height;
-        mlCanvas.getContext('2d')?.putImageData(mlResult, 0, 0);
-        setSketchCanvas(mlCanvas);
-      } else {
-        // Fallback to algorithmic tuning if ML fails
-        const presets = analyzeImageForPresets(image);
-        setOptions(o => ({ ...o, ...presets }));
+      setCloudProgress(0);
+      const progressInterval = setInterval(() => {
+        setCloudProgress(prev => {
+          if (prev >= 92) return prev;
+          return prev + (Math.random() * 5);
+        });
+      }, 400);
+
+      const cloudResult = await mlCloudService.processImage(hCanvas, cloudModel);
+      clearInterval(progressInterval);
+      setCloudProgress(100);
+
+      if (cloudResult && cloudResult.image) {
+        const resultImg = new Image();
+        resultImg.src = cloudResult.image;
+        await new Promise((resolve, reject) => {
+          resultImg.onload = resolve;
+          resultImg.onerror = reject;
+        });
+
+        const distillCanvas = document.createElement('canvas');
+        distillCanvas.width = resultImg.width;
+        distillCanvas.height = resultImg.height;
+        const dCtx = distillCanvas.getContext('2d', { willReadFrequently: true });
+        if (dCtx) {
+          dCtx.drawImage(resultImg, 0, 0);
+          distillCloudLines(distillCanvas);
+          const finalResult = distillCanvas.toDataURL('image/png');
+          setProcessedImage(finalResult);
+
+          if (window.navigator.vibrate) window.navigator.vibrate(40);
+        }
       }
     } catch (err) {
-      console.error('TraceMaster: ML Tuning failed, falling back:', err);
-      const presets = analyzeImageForPresets(image);
-      setOptions(o => ({ ...o, ...presets }));
+      console.error('TraceMaster: Cloud Refine failed:', err);
+    } finally {
+      setTimeout(() => {
+        setIsCloudProcessing(false);
+        setIsLoading(false);
+      }, 500);
     }
-
-    setTimeout(() => setIsAutoTuning(false), 1000);
-    if (window.navigator.vibrate) window.navigator.vibrate([10, 20]);
   };
 
   const handleMagicErase = (x: number, y: number) => {
@@ -546,8 +807,8 @@ const App: React.FC = () => {
           <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
             <div className="flex-1 relative silk-panel rounded-[2rem] lg:rounded-[4rem] overflow-hidden group bg-white/10 shadow-2xl">
               {!image ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-12 animate-in zoom-in slide-in-from-bottom-10 duration-1000">
-                  <div className="space-y-4 max-w-2xl">
+                <div className="absolute inset-0 flex flex-col items-center justify-start p-8 md:p-12 text-center space-y-12 animate-in zoom-in slide-in-from-bottom-10 duration-1000 overflow-y-auto custom-scrollbar">
+                  <div className="space-y-4 max-w-2xl mt-12">
                     <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6 silk-panel border-accent/20">
                       <Sparkles className="w-6 h-6 text-accent" />
                     </div>
@@ -595,6 +856,15 @@ const App: React.FC = () => {
                         </div>
                       </div>
                     </button>
+                  </div>
+
+                  <div className="flex flex-col items-center space-y-4 animate-in fade-in slide-in-from-top-4 duration-1000 delay-500">
+                    {isCloudProcessing && (
+                      <div className="flex items-center gap-3 text-accent animate-pulse">
+                        <div className="w-2 h-2 bg-accent rounded-full animate-bounce" />
+                        <span className="text-[10px] uppercase font-bold tracking-[0.3em]">Processing on Atelier Cloud...</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -649,6 +919,10 @@ const App: React.FC = () => {
               visible={uiVisible}
               eraserMode={eraserMode}
               setEraserMode={setEraserMode}
+              isCloudHQ={isCloudHQ}
+              setIsCloudHQ={setIsCloudHQ}
+              cloudModel={cloudModel}
+              setCloudModel={setCloudModel}
             />
 
             {isSidebarOpen && (
@@ -704,19 +978,108 @@ const App: React.FC = () => {
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="font-bold text-lg">Photo (ML Extraction)</h3>
-                    <p className="text-xs text-sienna/70 leading-relaxed">This is a photo or color image. We'll use AI to extract clean, perfect line art for you.</p>
+                    <h3 className="font-bold text-lg">{isCloudHQ ? 'AI Cloud Refine' : 'AI Refine'}</h3>
+                    <p className="text-xs text-sienna/70 leading-relaxed">
+                      {isCloudHQ
+                        ? 'Use SOTA AI in the Cloud to extract clean, perfect line art from your photo.'
+                        : 'Automatically adjust contrast and levels to isolate sketch lines locally.'}
+                    </p>
                   </div>
                 </div>
               </button>
             </div>
 
-            <button
-              onClick={() => setSelectionModalOpen(false)}
-              className="w-full py-4 text-[10px] font-bold uppercase tracking-[0.4em] text-sienna/40 hover:text-sienna/80 transition-colors"
-            >
-              Cancel Upload
+            <div className="pt-4 border-t border-sienna/5">
+              <button
+                onClick={() => setSelectionModalOpen(false)}
+                className="w-full text-[9px] font-bold uppercase tracking-[0.4em] text-sienna/30 hover:text-sienna/60 transition-colors"
+              >
+                Cancel Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cloud Progress Overlay */}
+      {isCloudProcessing && (
+        <CloudProgressOverlay
+          progress={cloudProgress}
+          onCancel={handleCancelCloudProcessing}
+        />
+      )}
+
+      {/* Cloud Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[3000] flex items-center justify-center p-6 lg:p-12 animate-in fade-in duration-500">
+          <div className="absolute inset-0 bg-sienna/20 backdrop-blur-xl" onClick={() => setShowSettings(false)} />
+          <div className="relative w-full max-w-xl silk-panel rounded-[3rem] p-10 lg:p-14 space-y-8 shadow-2xl bg-cream/90 animate-in zoom-in slide-in-from-bottom-10 duration-700">
+            <button onClick={() => setShowSettings(false)} className="absolute top-8 right-8 p-3 hover:bg-sienna/5 rounded-full transition-colors text-sienna/60 hover:text-sienna">
+              <X className="w-6 h-6" />
             </button>
+
+            <div className="space-y-4 text-center">
+              <div className="w-16 h-16 bg-accent/20 rounded-2xl flex items-center justify-center mx-auto mb-6 silk-panel border-accent/20">
+                <Globe className="w-8 h-8 text-accent" />
+              </div>
+              <h4 className="text-3xl font-light italic text-sienna">Atelier Cloud Engine</h4>
+              <p className="text-[10px] uppercase tracking-widest text-sienna/50 font-bold leading-relaxed">
+                Configure your Hugging Face Space URL for high-quality <br />sketch extraction using SOTA AI models.
+              </p>
+            </div>
+
+            <div className="space-y-6 pt-4">
+              <div className="space-y-2 text-left">
+                <label className="text-[9px] uppercase tracking-widest font-bold text-sienna/60 px-2 text-left">Space Public URL</label>
+                <input
+                  type="text"
+                  value={cloudUrl}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCloudUrl(val);
+                    mlCloudService.setConfig(val);
+                  }}
+                  placeholder="https://your-space-id.hf.space"
+                  className="w-full px-8 py-4 bg-white/50 border border-sienna/10 rounded-2xl text-sienna text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all placeholder:text-sienna/20 shadow-inner"
+                />
+              </div>
+
+              <div className="space-y-2 text-left">
+                <label className="text-[9px] uppercase tracking-widest font-bold text-sienna/60 px-2">AI Lens Type</label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setCloudModel('anime');
+                      localStorage.setItem('tm_cloud_model', 'anime');
+                    }}
+                    className={`flex-1 px-6 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all ${cloudModel === 'anime' ? 'bg-accent text-white shadow-inner' : 'bg-white/50 text-sienna/60 hover:bg-white/70'}`}
+                  >
+                    Anime / Clean
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCloudModel('realistic');
+                      localStorage.setItem('tm_cloud_model', 'realistic');
+                    }}
+                    className={`flex-1 px-6 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all ${cloudModel === 'realistic' ? 'bg-accent text-white shadow-inner' : 'bg-white/50 text-sienna/60 hover:bg-white/70'}`}
+                  >
+                    Realistic
+                  </button>
+                </div>
+                <p className="text-[8px] text-sienna/40 px-2 pt-1">Anime: Sharp linework. Realistic: Detailed portraits.</p>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="w-full py-5 bg-sienna text-cream rounded-2xl text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-accent transition-all shadow-xl hover:-translate-y-1 active:translate-y-0"
+                >
+                  Save Configuration
+                </button>
+              </div>
+
+              <p className="text-[8px] text-center text-sienna/30 uppercase tracking-[0.2em]">Live cloud processing active.</p>
+            </div>
           </div>
         </div>
       )}

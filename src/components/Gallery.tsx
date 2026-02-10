@@ -15,7 +15,7 @@ interface Category {
 }
 
 interface GalleryProps {
-    onSelect: (url: string) => void;
+    onSelect: (asset: { url: string; id: string }) => void;
     onClose: () => void;
 }
 
@@ -125,7 +125,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelect, onClose }) => {
                             >
                                 <button
                                     onClick={() => {
-                                        onSelect(item.url);
+                                        onSelect({ url: item.url, id: item.id });
                                         if (window.navigator.vibrate) window.navigator.vibrate(20);
                                     }}
                                     className="group relative w-full rounded-[1.5rem] md:rounded-[2.5rem] bg-white/40 border border-white/20 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 text-left"
