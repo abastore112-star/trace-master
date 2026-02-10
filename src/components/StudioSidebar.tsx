@@ -24,15 +24,36 @@ interface StudioSidebarProps {
     setSettings: any;
     deviceTier: 'LOW' | 'MID' | 'HIGH';
     visible: boolean;
+    eraserMode: boolean;
+    setEraserMode: (v: boolean) => void;
 }
 
 const StudioSidebar: React.FC<StudioSidebarProps> = ({
     image, isSidebarOpen, setIsSidebarOpen, activeTab, setActiveTab,
     options, setOptions, opacity, setOpacity, mirror, setMirror,
     transform, setTransform, palette, autoTuneManually, nudge,
-    settings, setSettings, deviceTier, visible
+    settings, setSettings, deviceTier, visible, eraserMode, setEraserMode
 }) => {
     const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+    const DisabledOverlayForSketch = ({ children }: { children: React.ReactNode }) => {
+        if (!options.isPerfectSketch) return <>{children}</>;
+        return (
+            <div className="relative group">
+                <div className="blur-md pointer-events-none opacity-40 grayscale transition-all duration-500">
+                    {children}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
+                    <div className="bg-accent/10 border border-accent/20 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-sm transform -rotate-1 group-hover:rotate-0 transition-transform duration-500">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-accent leading-tight">
+                            Settings not applicable<br />
+                            <span className="text-sienna/60 font-medium">This sketch is already perfect.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <aside
@@ -70,12 +91,14 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                     >
                                         {showAdvanced ? 'Simple Mode' : 'Advanced Tuning'}
                                     </button>
-                                    <button
-                                        onClick={autoTuneManually}
-                                        className="flex items-center gap-2 px-4 py-2 bg-accent/20 rounded-full text-[9px] font-bold uppercase tracking-widest text-accent hover:bg-accent hover:text-sienna dark:hover:text-white transition-all glow-on-hover shadow-sm"
-                                    >
-                                        <Sparkles className="w-3.5 h-3.5" /> Optimize Vision
-                                    </button>
+                                    <DisabledOverlayForSketch>
+                                        <button
+                                            onClick={autoTuneManually}
+                                            className="flex items-center gap-2 px-4 py-2 bg-accent/20 rounded-full text-[9px] font-bold uppercase tracking-widest text-accent hover:bg-accent hover:text-sienna dark:hover:text-white transition-all glow-on-hover shadow-sm"
+                                        >
+                                            <Sparkles className="w-3.5 h-3.5" /> High-Fidelity Scan
+                                        </button>
+                                    </DisabledOverlayForSketch>
                                 </div>
                             </div>
 
@@ -84,19 +107,21 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                 info="Adjusts the edge detection and line weight of your reference image. Threshold controls the line density - lower values capture more ghost-like details."
                             >
                                 <div className="space-y-10">
-                                    {showAdvanced ? (
-                                        <>
-                                            <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
-                                            <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
-                                        </>
-                                    ) : (
-                                        <ControlSlider
-                                            label="Tracing Intensity"
-                                            value={options.threshold}
-                                            min={10} max={120}
-                                            onChange={(v: number) => setOptions(o => ({ ...o, threshold: v, edgeStrength: v - 5 }))}
-                                        />
-                                    )}
+                                    <DisabledOverlayForSketch>
+                                        {showAdvanced ? (
+                                            <>
+                                                <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
+                                                <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
+                                            </>
+                                        ) : (
+                                            <ControlSlider
+                                                label="Tracing Intensity"
+                                                value={options.threshold}
+                                                min={10} max={120}
+                                                onChange={(v: number) => setOptions(o => ({ ...o, threshold: v, edgeStrength: v - 5 }))}
+                                            />
+                                        )}
+                                    </DisabledOverlayForSketch>
                                     <ControlSlider label="Ghost Opacity" value={opacity} min={0} max={1} step={0.01} onChange={(v: number) => setOpacity(v)} />
                                 </div>
                             </InspectorSection>
@@ -106,7 +131,12 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                 info="Core visibility and spatial controls. Mirrors your projection for hand-specific tracing or toggles a professional alignment grid."
                             >
                                 <div className="grid grid-cols-1 gap-4">
-                                    {showAdvanced && <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>}
+                                    {showAdvanced && (
+                                        <DisabledOverlayForSketch>
+                                            <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>
+                                        </DisabledOverlayForSketch>
+                                    )}
+                                    <OptionToggle active={eraserMode} onClick={() => setEraserMode(!eraserMode)}>Magic Eraser</OptionToggle>
                                     <OptionToggle active={mirror} onClick={() => setMirror(!mirror)}>Mirror Projection</OptionToggle>
                                     <OptionToggle active={settings.lockWake} onClick={() => setSettings((s: any) => ({ ...s, lockWake: !s.lockWake }))}>Prevent Sleep</OptionToggle>
                                 </div>

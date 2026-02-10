@@ -26,24 +26,48 @@ export const analyzeImageForPresets = (image: HTMLImageElement): Partial<Process
     if (l > maxLum) maxLum = l;
   }
 
-  const avgLum = totalLum / pixels;
+  // Calculate variance
+  let sumLum = 0;
+  let sumSqLum = 0;
+  let colorDiff = 0;
 
-  // Calculate variance to detect "sketchiness" vs "photo"
-  let variance = 0;
   for (let i = 0; i < data.length; i += 4) {
-    const l = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    variance += Math.pow(l - avgLum, 2);
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const lum = (r + g + b) / 3;
+    sumLum += lum;
+    sumSqLum += lum * lum;
+
+    // Sum of differences between channels (colorfulness)
+    colorDiff += Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
   }
-  const stdDev = Math.sqrt(variance / pixels);
+
+  const count = data.length / 4;
+  const avgLum = sumLum / count;
+  const avgColorDiff = colorDiff / (count * 3);
+  const stdDev = Math.sqrt(sumSqLum / count - avgLum * avgLum);
 
   // Heuristics:
   // stdDev < 40: Likely a clean sketch or low-contrast line art.
-  // stdDev > 70: Likely a complex photograph.
+  // stdDev > 75: Likely a complex photograph.
+  // avgColorDiff > 15: Likely a colored photo (even if clean)
 
   let suggestedThreshold = 45;
   let suggestedEdgeStrength = 40;
 
-  if (stdDev < 40) {
+  // Enhanced sketch detection:
+  // 1. High brightness (white background)
+  // 2. Low luminance variance
+  // 3. LOW color variance (sketches are usually grayscale)
+
+  // A sketch is bright, has low texture variance, and low color variance
+  let isSketch = stdDev < 45 && avgLum > 170 && avgColorDiff < 15;
+
+  // If it's a dark photo OR highly textured, it's NOT a sketch
+  if (stdDev > 60 || avgLum < 100) isSketch = false;
+
+  if (isSketch) {
     // Clean sketch: Be sensitive to find thin lines
     suggestedThreshold = 30;
     suggestedEdgeStrength = 25;
@@ -54,16 +78,30 @@ export const analyzeImageForPresets = (image: HTMLImageElement): Partial<Process
   }
 
   // Adjust for overall brightness
-  if (avgLum < 80) suggestedThreshold -= 10; // Dark image needs lower threshold
-  if (avgLum > 180) suggestedThreshold += 5; // Very bright image can handle higher
+  if (avgLum < 80) suggestedThreshold -= 10;
+  if (avgLum > 180) suggestedThreshold += 5;
+
+  // Determine if it's a "Perfect Sketch" (High contrast, clean lines, white background)
+  // Check if most pixels are either very bright or very dark
+  let extremePixels = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const l = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    if (l > 240 || l < 15) extremePixels++;
+  }
+  const extremeRatio = extremePixels / pixels;
+
+  // A perfect sketch has > 85% extreme pixels (lines are usually < 15% of page)
+  const isPerfectSketch = isSketch && extremeRatio > 0.85 && avgLum > 200;
 
   return {
     threshold: Math.max(10, Math.min(140, suggestedThreshold)),
     edgeStrength: Math.max(10, Math.min(140, suggestedEdgeStrength)),
     contrast: 100,
     brightness: 100,
-    invert: avgLum < 100, // Auto-invert for dark images
-    blend: 0
+    invert: avgLum < 100,
+    blend: 0,
+    isSketch,
+    isPerfectSketch
   };
 };
 
@@ -169,4 +207,78 @@ export const applyFilters = (
     }
     ctx.putImageData(imageData, 0, 0);
   }
+};
+
+/**
+ * Removes white backgrounds from sketches instantly
+ */
+export const applyAutoTransparency = (canvas: HTMLCanvasElement, threshold: number = 220) => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    // If pixel is near white, make it transparent
+    if (r > threshold && g > threshold && b > threshold) {
+      data[i + 3] = 0;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+};
+
+/**
+ * Flood-fills an area with transparency starting from (x, y)
+ */
+export const magicEraser = (canvas: HTMLCanvasElement, startX: number, startY: number, tolerance: number = 30) => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const width = canvas.width;
+  const height = canvas.height;
+
+  const getPixel = (x: number, y: number) => {
+    const idx = (y * width + x) * 4;
+    return [data[idx], data[idx + 1], data[idx + 2], data[idx + 3]];
+  };
+
+  const setPixelTransparent = (x: number, y: number) => {
+    const idx = (y * width + x) * 4;
+    data[idx + 3] = 0; // Alpha to 0
+  };
+
+  const targetColor = getPixel(startX, startY);
+  if (targetColor[3] === 0) return; // Already transparent
+
+  const stack: [number, number][] = [[startX, startY]];
+  const visited = new Uint8Array(width * height);
+
+  while (stack.length > 0) {
+    const [x, y] = stack.pop()!;
+    if (x < 0 || x >= width || y < 0 || y >= height) continue;
+
+    const idx = y * width + x;
+    if (visited[idx]) continue;
+    visited[idx] = 1;
+
+    const color = getPixel(x, y);
+    const diff = Math.abs(color[0] - targetColor[0]) +
+      Math.abs(color[1] - targetColor[1]) +
+      Math.abs(color[2] - targetColor[2]);
+
+    if (diff <= tolerance && color[3] > 0) {
+      setPixelTransparent(x, y);
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
 };

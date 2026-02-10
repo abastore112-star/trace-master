@@ -5,12 +5,18 @@ import LandingPage from './LandingPage';
 import StudioHeader from './components/StudioHeader';
 import StudioSidebar from './components/StudioSidebar';
 import { HUD } from './components/HUD';
-import { applyFilters, extractPalette, analyzeImageForPresets } from './utils/imageProcessing';
+import { applyFilters, extractPalette, analyzeImageForPresets, applyAutoTransparency, magicEraser } from './utils/imageProcessing';
 import { ProcessingOptions, TransformState, AppSettings } from './types/types';
 import { useTheme } from './utils/useTheme';
 import { getDeviceTier, getTierScale, DeviceInfo } from './utils/deviceInfo';
+import { initModel, extractNaturalSketch } from './services/mlVisionService';
 
-const SketchPreview: React.FC<{ sketchCanvas: HTMLCanvasElement | null, mirror: boolean }> = ({ sketchCanvas, mirror }) => {
+const SketchPreview: React.FC<{
+  sketchCanvas: HTMLCanvasElement | null,
+  mirror: boolean,
+  onErase?: (x: number, y: number) => void,
+  eraserMode?: boolean
+}> = ({ sketchCanvas, mirror, onErase, eraserMode }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -25,10 +31,43 @@ const SketchPreview: React.FC<{ sketchCanvas: HTMLCanvasElement | null, mirror: 
     }
   }, [sketchCanvas]);
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!eraserMode || !onErase || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const canvas = canvasRef.current;
+
+    // Account for object-contain letterboxing
+    const canvasRatio = canvas.width / canvas.height;
+    const rectRatio = rect.width / rect.height;
+
+    let actualWidth = rect.width;
+    let actualHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (rectRatio > canvasRatio) {
+      // Pillarboxed (bars on sides)
+      actualWidth = rect.height * canvasRatio;
+      offsetX = (rect.width - actualWidth) / 2;
+    } else {
+      // Letterboxed (bars on top/bottom)
+      actualHeight = rect.width / canvasRatio;
+      offsetY = (rect.height - actualHeight) / 2;
+    }
+
+    const x = Math.round(((e.clientX - (rect.left + offsetX)) / actualWidth) * canvas.width);
+    const y = Math.round(((e.clientY - (rect.top + offsetY)) / actualHeight) * canvas.height);
+
+    if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+      onErase(x, y);
+    }
+  };
+
   return (
     <canvas
       ref={canvasRef}
-      className={`max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)] ${mirror ? 'scale-x-[-1]' : ''}`}
+      onPointerDown={handlePointerDown}
+      className={`max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)] ${mirror ? 'scale-x-[-1]' : ''} ${eraserMode ? 'cursor-crosshair' : ''}`}
     />
   );
 };
@@ -48,6 +87,9 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'lens' | 'palette'>('lens');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAutoTuning, setIsAutoTuning] = useState(false);
+  const [eraserMode, setEraserMode] = useState(false);
+  const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState<{ img: HTMLImageElement, base64: string } | null>(null);
 
   const [options, setOptions] = useState<ProcessingOptions>({
     threshold: 45,
@@ -88,6 +130,10 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    initModel(); // Initialize ML model on mount
+  }, []);
+
+  useEffect(() => {
     if (view === 'studio') {
       wakeUI();
       const events = ['mousedown', 'mousemove', 'touchstart', 'scroll', 'keydown'];
@@ -111,43 +157,80 @@ const App: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64 = e.target?.result as string;
-        setOriginalBase64(base64);
         const img = new Image();
         img.onload = () => {
-          setImage(img);
-          setPalette(extractPalette(img));
-          setIsAutoTuning(true);
-
-          // Adaptive Scaling & Centering
-          const screenWidth = window.innerWidth * 0.8; // 80% safety margin
-          const screenHeight = window.innerHeight * 0.8;
-          const imgWidth = img.naturalWidth;
-          const imgHeight = img.naturalHeight;
-
-          const scaleX = screenWidth / imgWidth;
-          const scaleY = screenHeight / imgHeight;
-          const initialScale = Math.min(scaleX, scaleY, 1.0); // Don't upsale by default
-
-          setTransform({
-            scale: parseFloat(initialScale.toFixed(2)),
-            x: 0,
-            y: 0,
-            rotation: 0
-          });
-
-          const presets = analyzeImageForPresets(img);
-          const finalOptions = { ...options, ...presets } as ProcessingOptions;
-          setOptions(finalOptions);
-          updateSketch(img, finalOptions);
-          setView('studio');
-          setIsSidebarOpen(false);
-          setTimeout(() => setIsAutoTuning(false), 1200);
+          setPendingUpload({ img, base64 });
+          setSelectionModalOpen(true);
           if (window.navigator.vibrate) window.navigator.vibrate(40);
         };
         img.src = base64;
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const onSelectType = (isML: boolean) => {
+    if (!pendingUpload) return;
+    const { img, base64 } = pendingUpload;
+
+    setOriginalBase64(base64);
+    setImage(img);
+    setPalette(extractPalette(img));
+    setIsAutoTuning(true);
+
+    // Adaptive Scaling & Centering
+    const screenWidth = window.innerWidth * 0.8;
+    const screenHeight = window.innerHeight * 0.8;
+    const imgWidth = img.naturalWidth;
+    const imgHeight = img.naturalHeight;
+
+    const scaleX = screenWidth / imgWidth;
+    const scaleY = screenHeight / imgHeight;
+    const initialScale = Math.min(scaleX, scaleY, 1.0);
+
+    setTransform({
+      scale: parseFloat(initialScale.toFixed(2)),
+      x: 0,
+      y: 0,
+      rotation: 0
+    });
+
+    const presets = analyzeImageForPresets(img);
+    const finalOptions = {
+      ...options,
+      ...presets,
+      isPerfectSketch: !isML // If user says it's a sketch, we treat it as perfect source
+    } as ProcessingOptions;
+
+    setOptions(finalOptions);
+
+    if (!isML) {
+      // User says it's a sketch: Just apply auto-transparency and bypass ML
+      if (hiddenCanvasRef.current) {
+        setTimeout(() => {
+          if (hiddenCanvasRef.current) {
+            applyAutoTransparency(hiddenCanvasRef.current);
+            const transparentCanvas = document.createElement('canvas');
+            transparentCanvas.width = hiddenCanvasRef.current.width;
+            transparentCanvas.height = hiddenCanvasRef.current.height;
+            transparentCanvas.getContext('2d')?.drawImage(hiddenCanvasRef.current, 0, 0);
+            setSketchCanvas(transparentCanvas);
+            setIsAutoTuning(false);
+          }
+        }, 100);
+      }
+    } else {
+      // User says it's a photo: Standard ML Refine
+      setTimeout(() => {
+        autoTuneManually(img);
+      }, 300);
+    }
+
+    setSelectionModalOpen(false);
+    setPendingUpload(null);
+    setView('studio');
+    setIsSidebarOpen(false);
+    setTimeout(() => setIsAutoTuning(false), 1200);
   };
 
   const processWorkerRequest = useCallback((img: HTMLImageElement, opts: ProcessingOptions) => {
@@ -258,13 +341,59 @@ const App: React.FC = () => {
     if (window.navigator.vibrate) window.navigator.vibrate([30, 10, 30]);
   };
 
-  const autoTuneManually = () => {
-    if (!image) return;
+  const autoTuneManually = async (targetImg?: HTMLImageElement) => {
+    const activeImg = targetImg || image;
+    if (!activeImg || !hiddenCanvasRef.current) return;
     setIsAutoTuning(true);
-    const presets = analyzeImageForPresets(image);
-    setOptions(o => ({ ...o, ...presets }));
+
+    try {
+      // Draw to hidden canvas first if we are processing a new image
+      const hCanvas = hiddenCanvasRef.current;
+      const hCtx = hCanvas.getContext('2d');
+      if (hCtx) {
+        hCanvas.width = activeImg.naturalWidth;
+        hCanvas.height = activeImg.naturalHeight;
+        hCtx.drawImage(activeImg, 0, 0);
+      }
+
+      // Phase 2: ML-Powered Natural Sketch Extraction
+      const mlResult = await extractNaturalSketch(hCanvas);
+      if (mlResult) {
+        const mlCanvas = document.createElement('canvas');
+        mlCanvas.width = mlResult.width;
+        mlCanvas.height = mlResult.height;
+        mlCanvas.getContext('2d')?.putImageData(mlResult, 0, 0);
+        setSketchCanvas(mlCanvas);
+      } else {
+        // Fallback to algorithmic tuning if ML fails
+        const presets = analyzeImageForPresets(image);
+        setOptions(o => ({ ...o, ...presets }));
+      }
+    } catch (err) {
+      console.error('TraceMaster: ML Tuning failed, falling back:', err);
+      const presets = analyzeImageForPresets(image);
+      setOptions(o => ({ ...o, ...presets }));
+    }
+
     setTimeout(() => setIsAutoTuning(false), 1000);
     if (window.navigator.vibrate) window.navigator.vibrate([10, 20]);
+  };
+
+  const handleMagicErase = (x: number, y: number) => {
+    if (!image) return;
+
+    // Call the worker with magic eraser action
+    // Higher tolerance (50) for patterns as requested by user
+    const eraseOptions: ProcessingOptions = {
+      ...options,
+      specialAction: 'magicEraser',
+      startX: x,
+      startY: y,
+      tolerance: 60
+    };
+
+    processWorkerRequest(image, eraseOptions);
+    if (window.navigator.vibrate) window.navigator.vibrate(20);
   };
 
   if (view === 'landing') {
@@ -388,6 +517,8 @@ const App: React.FC = () => {
                   <SketchPreview
                     sketchCanvas={sketchCanvas}
                     mirror={mirror}
+                    onErase={handleMagicErase}
+                    eraserMode={eraserMode}
                   />
                 </div>
               )}
@@ -416,6 +547,8 @@ const App: React.FC = () => {
           setSettings={setSettings}
           deviceTier={deviceInfo.tier}
           visible={uiVisible}
+          eraserMode={eraserMode}
+          setEraserMode={setEraserMode}
         />
 
         {isSidebarOpen && (
@@ -424,6 +557,59 @@ const App: React.FC = () => {
       </div>
 
       <canvas ref={hiddenCanvasRef} className="hidden" />
+
+      {/* Upload Selection Modal */}
+      {selectionModalOpen && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-sienna/20 backdrop-blur-md animate-in fade-in duration-500" onClick={() => setSelectionModalOpen(false)} />
+          <div className="relative w-full max-w-lg silk-panel rounded-[3rem] p-10 shadow-2xl space-y-8 animate-in zoom-in slide-in-from-bottom-10 duration-500 border border-white/40">
+            <div className="space-y-2 text-center">
+              <Sparkles className="w-12 h-12 text-accent mx-auto animate-pulse" />
+              <h2 className="text-3xl font-light italic">Refinement Intelligence</h2>
+              <p className="text-[10px] text-sienna/60 uppercase tracking-[0.4em]">Tell us more about your source art.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <button
+                onClick={() => onSelectType(false)}
+                className="group relative overflow-hidden p-6 rounded-[2rem] bg-white/40 hover:bg-white/60 border border-white/20 transition-all duration-300 transform hover:-translate-y-1 text-left"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-accent/10 rounded-2xl group-hover:bg-accent group-hover:text-white transition-colors">
+                    <ImageIcon className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-lg">Sketch (Preserve Source)</h3>
+                    <p className="text-xs text-sienna/70 leading-relaxed">Your art is already a sketch. We'll keep every single detail and just ghost the background.</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => onSelectType(true)}
+                className="group relative overflow-hidden p-6 rounded-[2rem] bg-white/40 hover:bg-white/60 border border-white/20 transition-all duration-300 transform hover:-translate-y-1 text-left"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-accent/10 rounded-2xl group-hover:bg-accent group-hover:text-white transition-colors">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-lg">Photo (ML Extraction)</h3>
+                    <p className="text-xs text-sienna/70 leading-relaxed">This is a photo or color image. We'll use AI to extract clean, perfect line art for you.</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setSelectionModalOpen(false)}
+              className="w-full py-4 text-[10px] font-bold uppercase tracking-[0.4em] text-sienna/40 hover:text-sienna/80 transition-colors"
+            >
+              Cancel Upload
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 

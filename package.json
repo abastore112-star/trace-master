@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@google/genai": "^1.40.0",
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/face_mesh": "^0.4.1633559619",
     "lucide-react": "^0.563.0",
+    "onnxruntime-web": "^1.24.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
