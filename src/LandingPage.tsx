@@ -310,10 +310,12 @@ const LandingPage: React.FC<LandingPageProps> = ({
               Made for the friction of lead on paper. Guiding hands, honoring crafts.
             </p>
           </div>
-          <div className="flex gap-16 text-[10px] font-bold uppercase tracking-widest text-sienna/80">
-            <a href="#" className="hover:text-accent transition-colors">Instagram</a>
-            <a href="#" className="hover:text-accent transition-colors">Twitter</a>
-            <a href="#" className="hover:text-accent transition-colors">Legal</a>
+          <div className="flex flex-wrap justify-center gap-8 lg:gap-16 text-[10px] font-bold uppercase tracking-widest text-sienna/80">
+            <a href="#/terms" className="hover:text-accent transition-colors">Terms</a>
+            <a href="#/privacy" className="hover:text-accent transition-colors">Privacy</a>
+            <a href="#/refund" className="hover:text-accent transition-colors">Refund Policy</a>
+            <a href="https://instagram.com" target="_blank" rel="noopener" className="hover:text-accent transition-colors">Instagram</a>
+            <a href="https://twitter.com" target="_blank" rel="noopener" className="hover:text-accent transition-colors">Twitter</a>
           </div>
         </div>
         <div className="text-center pt-20 text-[9px] font-bold uppercase tracking-[0.4em] text-sienna/40">

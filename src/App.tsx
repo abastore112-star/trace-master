@@ -40,6 +40,7 @@ import { ProjectsDashboard } from './components/ProjectsDashboard';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { revenueCatService } from './services/revenueCatService';
+import { Legal } from './components/Legal';
 
 const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }> = ({ progress, onCancel }) => {
   return (
@@ -203,7 +204,8 @@ const SketchPreview: React.FC<{
 
 const App: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<'landing' | 'studio' | 'dashboard' | 'auth' | 'onboarding'>('landing');
+  const [view, setView] = useState<'landing' | 'auth' | 'dashboard' | 'studio' | 'onboarding' | 'legal'>('landing');
+  const [legalTab, setLegalTab] = useState<'terms' | 'privacy' | 'refund'>('terms');
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -302,7 +304,25 @@ const App: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Handle initial hash for legal pages
+    const currentHash = window.location.hash;
+    if (currentHash === '#/terms') { setView('legal'); setLegalTab('terms'); }
+    else if (currentHash === '#/privacy') { setView('legal'); setLegalTab('privacy'); }
+    else if (currentHash === '#/refund') { setView('legal'); setLegalTab('refund'); }
+
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#/terms') { setView('legal'); setLegalTab('terms'); }
+      else if (hash === '#/privacy') { setView('legal'); setLegalTab('privacy'); }
+      else if (hash === '#/refund') { setView('legal'); setLegalTab('refund'); }
+      else if (hash === '#/' || hash === '') { setView('landing'); }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
@@ -1106,6 +1126,10 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  if (view === 'legal') {
+    return <Legal tab={legalTab} onTabChange={setLegalTab} onBack={() => { setView('landing'); window.location.hash = '#/'; }} />;
+  }
 
   if (view === 'auth') return <Auth />;
   if (view === 'onboarding' && session) return <Onboarding userId={session.user.id} onComplete={() => fetchProfile(session.user.id)} />;
