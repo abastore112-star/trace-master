@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ChevronUp, ChevronLeft, ChevronRight, ChevronDown, RotateCcw } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, ChevronUp, ChevronLeft, ChevronRight, ChevronDown, RotateCcw } from 'lucide-react';
 import { TabButton, InspectorSection, ControlSlider, OptionToggle, NudgeButton } from './UIPrimitives';
 import { ProcessingOptions, TransformState } from '../types/types';
 
@@ -41,6 +41,23 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
 }) => {
     const [showAdvanced, setShowAdvanced] = React.useState(false);
 
+    const WaitStateOverlay = ({ children, title }: { children: React.ReactNode, title?: string }) => {
+        if (image) return <>{children}</>;
+        return (
+            <div className="relative group">
+                <div className="blur-xl pointer-events-none opacity-20 grayscale transition-all duration-700">
+                    {children}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-1000">
+                    <div className="bg-sienna/5 border border-sienna/20 backdrop-blur-md px-6 py-3 rounded-2xl shadow-xl flex flex-col items-center gap-2">
+                        <ImageIcon className="w-5 h-5 text-sienna/40" />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-sienna/40">Waiting for Vision</span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const DisabledOverlayForSketch = ({ children }: { children: React.ReactNode }) => {
         if (!options.isPerfectSketch) return <>{children}</>;
         return (
@@ -48,12 +65,9 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                 <div className="blur-md pointer-events-none opacity-40 grayscale transition-all duration-500">
                     {children}
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center p-4 text-center">
-                    <div className="bg-accent/10 border border-accent/20 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-sm transform -rotate-1 group-hover:rotate-0 transition-transform duration-500">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-accent leading-tight">
-                            Settings not applicable<br />
-                            <span className="text-sienna/60 font-medium">This sketch is already perfect.</span>
-                        </p>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-xl border border-sienna/20 shadow-lg">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-sienna">Perfect Sketch Mode</span>
                     </div>
                 </div>
             </div>
@@ -68,9 +82,8 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
         transition-all duration-700 ease-out z-[1070]
         bg-white/60 lg:bg-transparent backdrop-blur-3xl lg:backdrop-blur-none
         ${isSidebarOpen ? 'translate-y-0 h-[65vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
-        ${visible ? 'lg:opacity-100' : 'opacity-0 pointer-events-none translate-y-20 lg:translate-y-0'}
+        ${visible || !image ? 'lg:opacity-100' : 'opacity-0 pointer-events-none translate-y-20 lg:translate-y-0'}
         lg:p-0 rounded-t-[4rem] lg:rounded-none lg:shadow-none touch-auto
-        ${!image ? 'lg:opacity-10 lg:pointer-events-none' : ''}
       `}
             style={{
                 paddingLeft: 'max(0px, var(--safe-left))',
@@ -124,24 +137,26 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                 title="Lens Refinement"
                                 info="Adjusts the edge detection and line weight of your reference image. Threshold controls the line density - lower values capture more ghost-like details."
                             >
-                                <div className="space-y-10">
-                                    <DisabledOverlayForSketch>
-                                        {showAdvanced ? (
-                                            <>
-                                                <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
-                                                <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
-                                            </>
-                                        ) : (
-                                            <ControlSlider
-                                                label="Tracing Intensity"
-                                                value={options.threshold}
-                                                min={10} max={120}
-                                                onChange={(v: number) => setOptions(o => ({ ...o, threshold: v, edgeStrength: v - 5 }))}
-                                            />
-                                        )}
-                                    </DisabledOverlayForSketch>
-                                    <ControlSlider label="Ghost Opacity" value={opacity} min={0} max={1} step={0.01} onChange={(v: number) => setOpacity(v)} />
-                                </div>
+                                <WaitStateOverlay>
+                                    <div className="space-y-10">
+                                        <DisabledOverlayForSketch>
+                                            {showAdvanced ? (
+                                                <>
+                                                    <ControlSlider label="Line Distillation" value={options.threshold} min={0} max={150} onChange={(v: number) => setOptions(o => ({ ...o, threshold: v }))} />
+                                                    <ControlSlider label="Pencil Grain" value={options.edgeStrength} min={1} max={150} onChange={(v: number) => setOptions(o => ({ ...o, edgeStrength: v }))} />
+                                                </>
+                                            ) : (
+                                                <ControlSlider
+                                                    label="Tracing Intensity"
+                                                    value={options.threshold}
+                                                    min={10} max={120}
+                                                    onChange={(v: number) => setOptions(o => ({ ...o, threshold: v, edgeStrength: v - 5 }))}
+                                                />
+                                            )}
+                                        </DisabledOverlayForSketch>
+                                        <ControlSlider label="Ghost Opacity" value={opacity} min={0} max={1} step={0.01} onChange={(v: number) => setOpacity(v)} />
+                                    </div>
+                                </WaitStateOverlay>
                             </InspectorSection>
 
                             <InspectorSection
@@ -151,9 +166,11 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                 <div className="grid grid-cols-1 gap-4">
                                     {showAdvanced && (
                                         <>
-                                            <DisabledOverlayForSketch>
-                                                <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>
-                                            </DisabledOverlayForSketch>
+                                            <WaitStateOverlay>
+                                                <DisabledOverlayForSketch>
+                                                    <OptionToggle active={options.invert} onClick={() => setOptions(o => ({ ...o, invert: !o.invert }))}>Invert Luminance</OptionToggle>
+                                                </DisabledOverlayForSketch>
+                                            </WaitStateOverlay>
                                             <div className="flex flex-col gap-2 p-4 bg-sienna/5 rounded-3xl border border-sienna/10 animate-in fade-in slide-in-from-top-2 duration-500">
                                                 <label className="text-[9px] uppercase tracking-widest font-bold text-sienna/40 px-1">AI Engine Mode</label>
                                                 <div className="flex gap-2">
@@ -179,7 +196,9 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                             </div>
                                         </>
                                     )}
-                                    <OptionToggle active={eraserMode} onClick={() => setEraserMode(!eraserMode)}>Magic Eraser</OptionToggle>
+                                    <WaitStateOverlay>
+                                        <OptionToggle active={eraserMode} onClick={() => setEraserMode(!eraserMode)}>Magic Eraser</OptionToggle>
+                                    </WaitStateOverlay>
                                     <OptionToggle active={mirror} onClick={() => setMirror(!mirror)}>Mirror Projection</OptionToggle>
                                     <OptionToggle active={settings.lockWake} onClick={() => setSettings((s: any) => ({ ...s, lockWake: !s.lockWake }))}>Prevent Sleep</OptionToggle>
                                 </div>
@@ -193,22 +212,24 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
                                 title="Pigment Extraction"
                                 info="Analyzes your reference art to extract the most prominent brand colors and pigment values for physical mixing."
                             >
-                                <p className="text-[12px] text-sienna/70 font-light italic leading-relaxed mb-8 px-2 text-center">Sampled hues from your vision to aid physical paint mixing and selection.</p>
-                                <div className="grid grid-cols-4 gap-4 px-2 pb-4">
-                                    {palette.map((c, i) => (
-                                        <div key={i} className="group relative">
-                                            <div
-                                                className="w-full aspect-square rounded-2xl border border-sienna/20 shadow-lg transition-all group-hover:scale-110 cursor-pointer"
-                                                style={{ backgroundColor: c }}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(c);
-                                                    if (window.navigator.vibrate) window.navigator.vibrate(10);
-                                                }}
-                                            />
-                                            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-bold opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest text-sienna/70">{c}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                                <WaitStateOverlay>
+                                    <p className="text-[12px] text-sienna/70 font-light italic leading-relaxed mb-8 px-2 text-center">Sampled hues from your vision to aid physical paint mixing and selection.</p>
+                                    <div className="grid grid-cols-4 gap-4 px-2 pb-4">
+                                        {palette.map((c, i) => (
+                                            <div key={i} className="group relative">
+                                                <div
+                                                    className="w-full aspect-square rounded-2xl border border-sienna/20 shadow-lg transition-all group-hover:scale-110 cursor-pointer"
+                                                    style={{ backgroundColor: c }}
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(c);
+                                                        if (window.navigator.vibrate) window.navigator.vibrate(10);
+                                                    }}
+                                                />
+                                                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-bold opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest text-sienna/70">{c}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </WaitStateOverlay>
                             </InspectorSection>
                         </div>
                     )}

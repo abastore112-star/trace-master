@@ -291,66 +291,96 @@ export const distillCloudLines = (canvas: HTMLCanvasElement) => {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return;
 
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
   const width = canvas.width;
   const height = canvas.height;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
 
-  // 1. More Robust Background Sampling
-  // Sample small grids in corners and center of edges
+  // 1. ROBUST BACKGROUND SAMPLING (GET MEDIAN FOR OUTLIER REJECTION)
   const samplePoints = [
-    { x: 10, y: 10 }, { x: width - 10, y: 10 },
-    { x: 10, y: height - 10 }, { x: width - 10, y: height - 10 },
-    { x: Math.floor(width / 2), y: 10 }, { x: Math.floor(width / 2), y: height - 10 }
+    { x: 5, y: 5 }, { x: width - 5, y: 5 },
+    { x: 5, y: height - 5 }, { x: width - 5, y: height - 5 },
+    { x: Math.floor(width / 2), y: 5 }, { x: Math.floor(width / 2), y: height - 5 },
+    { x: 5, y: Math.floor(height / 2) }, { x: width - 5, y: Math.floor(height / 2) }
   ];
 
-  let bgR = 0, bgG = 0, bgB = 0;
-  let count = 0;
+  const rSamples: number[] = [];
+  const gSamples: number[] = [];
+  const bSamples: number[] = [];
 
   samplePoints.forEach(p => {
-    // Sample a 3x3 grid around each point
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        const x = p.x + dx;
-        const y = p.y + dy;
-        if (x >= 0 && x < width && y >= 0 && y < height) {
-          const idx = (y * width + x) * 4;
-          bgR += data[idx];
-          bgG += data[idx + 1];
-          bgB += data[idx + 2];
-          count++;
-        }
-      }
-    }
+    const idx = (p.y * width + p.x) * 4;
+    rSamples.push(data[idx]);
+    gSamples.push(data[idx + 1]);
+    bSamples.push(data[idx + 2]);
   });
 
-  bgR /= count;
-  bgG /= count;
-  bgB /= count;
+  const getMedian = (arr: number[]) => {
+    const sorted = [...arr].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
 
-  // 2. Adaptive Extraction
+  const bgR = getMedian(rSamples);
+  const bgG = getMedian(gSamples);
+  const bgB = getMedian(bSamples);
+
+  // 2. SOFT-THRESHOLDING WITH PERCEPTUAL CURVE
+  // We want to preserve gray-scale nuance for fine details while stripping background
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
 
-    // Euclidean distance
+    // Perceptual distance (Luminance weighted)
     const diff = Math.sqrt(
-      Math.pow(r - bgR, 2) +
-      Math.pow(g - bgG, 2) +
-      Math.pow(b - bgB, 2)
+      Math.pow((r - bgR) * 0.299, 2) +
+      Math.pow((g - bgG) * 0.587, 2) +
+      Math.pow((b - bgB) * 0.114, 2)
     );
 
-    // More sensitive threshold (25) to catch pencil strokes
-    if (diff > 25) {
-      // It's a line - Force to pure black for high-fidelity projection
-      data[i] = 0;
-      data[i + 1] = 0;
-      data[i + 2] = 0;
-      data[i + 3] = 255;
+    // SOFT THRESHOLD LOGIC:
+    // Use a sigmoid-like curve to determine line strength (alpha)
+    // lower threshold: 6 (tiny details start appearing)
+    // upper threshold: 22 (full black)
+    if (diff < 6) {
+      data[i + 3] = 0; // Absolute background
     } else {
-      // It's background - make perfectly transparent
-      data[i + 3] = 0;
+      // Calculate strength [0, 1]
+      let strength = (diff - 6) / (22 - 6);
+      strength = Math.max(0, Math.min(1, strength));
+
+      // Apply contrast curve to keep lines crisp but not "jagged"
+      strength = 1 / (1 + Math.exp(-8 * (strength - 0.4)));
+
+      // Force line color to deep sienna-black for elite aesthetic
+      data[i] = 10;
+      data[i + 1] = 5;
+      data[i + 2] = 0;
+      data[i + 3] = Math.floor(strength * 255);
+    }
+  }
+
+  // 3. INTELLIGENT NOISE REDUCTION
+  // Only remove a pixel if it's extremely faint AND has no strong neighbors
+  const pixels = data;
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i4 = (y * width + x) * 4;
+      if (pixels[i4 + 3] > 0 && pixels[i4 + 3] < 50) {
+        let neighbors = 0;
+        // Check 8-neighborhood for connectivity
+        for (let ny = -1; ny <= 1; ny++) {
+          for (let nx = -1; nx <= 1; nx++) {
+            if (ny === 0 && nx === 0) continue;
+            const ni4 = ((y + ny) * width + (x + nx)) * 4;
+            if (pixels[ni4 + 3] > 100) neighbors++;
+          }
+        }
+
+        if (neighbors === 0) {
+          pixels[i4 + 3] = 0;
+        }
+      }
     }
   }
 

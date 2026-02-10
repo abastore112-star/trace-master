@@ -195,6 +195,12 @@
                     "title": "Anime Sketch 32",
                     "url": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_32.jpg",
                     "thumb": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_32.jpg"
+                },
+                {
+                    "id": "anime_33",
+                    "title": "Anime Sketch 33",
+                    "url": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_33.png",
+                    "thumb": "https://ubbkmlswhlwvpcxrzahc.supabase.co/storage/v1/object/public/gallery/anime/anime_33.png"
                 }
             ]
         },
