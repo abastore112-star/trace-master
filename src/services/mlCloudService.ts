@@ -71,6 +71,7 @@ class MLCloudService {
         outputFormat: 'webp' | 'svg',
         retryCount = 0
     ): Promise<{ image: string; svg?: string } | null> {
+        console.log(`MLCloudService: Requesting ${modelType} refinement (Attempt ${retryCount + 1})...`);
         if (!this.spaceUrl) {
             console.error('MLCloudService: No Cloud URL configured');
             return null;
@@ -94,6 +95,7 @@ class MLCloudService {
             formData.append('file', blob, 'image.png');
             formData.append('model_type', modelType);
             formData.append('output_format', outputFormat);
+            formData.append('ts', Date.now().toString()); // Cache bust
 
             const endpoint = this.spaceUrl.endsWith('/') ? `${this.spaceUrl}process` : `${this.spaceUrl}/process`;
 

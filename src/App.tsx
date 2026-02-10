@@ -23,16 +23,22 @@ import {
   Unlock
 } from 'lucide-react';
 import CameraOverlay from './components/CameraOverlay';
-import LandingPage from './LandingPage';
-import StudioHeader from './components/StudioHeader';
 import StudioSidebar from './components/StudioSidebar';
 import Gallery from './components/Gallery';
+import LandingPage from './LandingPage';
+import StudioHeader from './components/StudioHeader';
 import { HUD } from './components/HUD';
 import { applyFilters, extractPalette, analyzeImageForPresets, applyAutoTransparency, magicEraser, distillCloudLines } from './utils/imageProcessing';
 import { ProcessingOptions, TransformState, AppSettings } from './types/types';
 import { useTheme } from './utils/useTheme';
 import { getDeviceTier, getTierScale, DeviceInfo } from './utils/deviceInfo';
 import { mlCloudService } from './services/mlCloudService';
+import { s3Service } from './services/s3Service';
+import { Auth } from './components/Auth';
+import { Onboarding } from './components/Onboarding';
+import { ProjectsDashboard } from './components/ProjectsDashboard';
+import { supabase } from './lib/supabaseClient';
+import { Session } from '@supabase/supabase-js';
 
 const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }> = ({ progress, onCancel }) => {
   return (
@@ -72,6 +78,52 @@ const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }>
         >
           Cancel Processing
         </button>
+      </div>
+    </div>
+  );
+};
+
+const NoCreditsModal: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => {
+  return (
+    <div className="fixed inset-0 z-[6000] flex items-center justify-center bg-sienna/20 backdrop-blur-xl p-6 animate-in fade-in duration-500">
+      <div className="w-full max-w-md bg-cream rounded-[4rem] p-12 space-y-10 shadow-2xl relative overflow-hidden border border-sienna/10">
+        <div className="absolute top-0 right-0 p-8">
+          <button onClick={onDismiss} className="p-3 bg-sienna/5 rounded-full text-sienna/40 hover:text-accent transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="w-20 h-20 bg-accent/10 rounded-[2rem] flex items-center justify-center text-accent">
+            <Sparkles className="w-10 h-10" />
+          </div>
+          <h2 className="text-4xl font-light italic text-sienna leading-tight">Your Atelier light has faded.</h2>
+          <p className="text-sm text-sienna/60 leading-relaxed font-light italic">
+            Your daily Cloud HQ credits have been exhausted. High-fidelity extraction requires collective energy.
+          </p>
+        </div>
+
+        <div className="p-8 bg-white/40 rounded-[2rem] border border-sienna/5 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] uppercase tracking-widest font-bold text-sienna/40">Next Refill</span>
+            <span className="text-[10px] uppercase tracking-widest font-bold text-accent">Within 24 Hours</span>
+          </div>
+          <div className="h-1.5 w-full bg-sienna/5 rounded-full overflow-hidden">
+            <div className="h-full bg-accent/40 w-3/4 animate-pulse" />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <button
+            onClick={onDismiss}
+            className="w-full py-6 bg-sienna text-cream rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-accent hover:text-sienna transition-all shadow-xl"
+          >
+            Continue with Local Sketch
+          </button>
+          <p className="text-center text-[8px] uppercase tracking-widest text-sienna/30 font-bold">
+            Pro access for unlimited extraction coming soon
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -140,7 +192,10 @@ const SketchPreview: React.FC<{
 
 const App: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<'landing' | 'studio'>('landing');
+  const [view, setView] = useState<'landing' | 'studio' | 'dashboard' | 'auth' | 'onboarding'>('landing');
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [originalBase64, setOriginalBase64] = useState<string>("");
@@ -164,6 +219,7 @@ const App: React.FC = () => {
   const [pendingUpload, setPendingUpload] = useState<{ img: HTMLImageElement, base64: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
+  const [showNoCredits, setShowNoCredits] = useState(false);
 
   const [options, setOptions] = useState<ProcessingOptions>({
     threshold: 45,
@@ -210,7 +266,104 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    mlCloudService.setConfig(cloudUrl); // Initialize cloud service with stored URL
+    // Listen for auth changes
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      if (initialSession) {
+        fetchProfile(initialSession.user.id);
+      } else {
+        setIsAuthLoading(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setView('landing');
+        setIsAuthLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+    } else {
+      setProfile(data);
+
+      // Handle Daily Refill
+      if (data) {
+        const lastReset = data.last_credit_reset ? new Date(data.last_credit_reset) : new Date(0);
+        const now = new Date();
+        const diffHours = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
+
+        if (diffHours >= 24) {
+          refillCredits(userId);
+        }
+      }
+
+      if (!data?.nickname) {
+        setView('onboarding');
+      } else if (view === 'auth') {
+        setView('dashboard');
+      }
+      setIsAuthLoading(false);
+    }
+  };
+
+  const refillCredits = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        ai_credits: 5,
+        last_credit_reset: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setProfile(data);
+    }
+  };
+
+  const deductCredit = async () => {
+    if (!session || !profile) return;
+    if (profile.is_pro) return; // Unlimited for Pro
+
+    const newCredits = Math.max(0, (profile.ai_credits || 0) - 1);
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ ai_credits: newCredits })
+      .eq('id', session.user.id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setProfile(data);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setView('landing');
+    setProfile(null);
+    setSession(null);
+  };
+
+  useEffect(() => {
+    mlCloudService.setConfig(cloudUrl);
   }, [cloudUrl]);
 
   useEffect(() => {
@@ -241,6 +394,15 @@ const App: React.FC = () => {
 
         // If Cloud HQ is enabled, process via cloud
         if (isCloudHQ && cloudUrl) {
+          // Check Credits
+          if (!profile?.is_pro && (profile?.ai_credits || 0) <= 0) {
+            setShowNoCredits(true);
+            setIsLoading(false);
+            setPendingUpload({ img, base64 });
+            setView('studio');
+            return;
+          }
+
           setIsCloudProcessing(true);
           try {
             // Create a temp canvas to hold the image
@@ -288,6 +450,7 @@ const App: React.FC = () => {
 
                   setImage(img);
                   setProcessedImage(finalResult);
+                  setSketchCanvas(distillCanvas);
                   setOriginalBase64(base64);
                   setView('studio');
                   setIsLoading(false);
@@ -376,6 +539,7 @@ const App: React.FC = () => {
 
                   setImage(img);
                   setProcessedImage(finalResult);
+                  setSketchCanvas(distillCanvas);
                   setOriginalBase64(base64);
                   setView('studio');
                   setIsLoading(false);
@@ -451,6 +615,96 @@ const App: React.FC = () => {
     } catch (err) {
       console.error('Failed to load gallery asset:', err);
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveProject = async () => {
+    if (!session || !image) return;
+
+    try {
+      setIsCloudProcessing(true); // Reuse for loading state
+      setCloudProgress(10);
+
+      const projectName = prompt('Project Name:', `Trace ${new Date().toLocaleDateString()}`) || 'Untitled Trace';
+      setCloudProgress(20);
+
+      // 1. Get Blobs
+      const getBlob = (source: HTMLImageElement | HTMLCanvasElement | string | null): Promise<Blob | null> => {
+        return new Promise((resolve) => {
+          if (!source) return resolve(null);
+
+          // Direct canvas capture
+          if (source instanceof HTMLCanvasElement) {
+            source.toBlob(resolve, 'image/png');
+            return;
+          }
+
+          const canvas = hiddenCanvasRef.current;
+          if (!canvas) return resolve(null);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(null);
+
+          if (typeof source === 'string') {
+            const tempImg = new Image();
+            tempImg.crossOrigin = 'anonymous';
+            tempImg.onload = () => {
+              canvas.width = tempImg.naturalWidth;
+              canvas.height = tempImg.naturalHeight;
+              ctx.drawImage(tempImg, 0, 0);
+              canvas.toBlob(resolve, 'image/png');
+            };
+            tempImg.onerror = () => resolve(null);
+            tempImg.src = source;
+          } else {
+            canvas.width = source.naturalWidth;
+            canvas.height = source.naturalHeight;
+            ctx.drawImage(source, 0, 0);
+            canvas.toBlob(resolve, 'image/png');
+          }
+        });
+      };
+
+      const originalBlob = await getBlob(image);
+      const processedBlob = await getBlob(sketchCanvas || processedImage || image);
+      setCloudProgress(40);
+
+      if (!originalBlob) throw new Error('Failed to capture original image');
+
+      // 2. Upload to S3
+      const timestamp = Date.now();
+      const originalKey = `users/${session.user.id}/projects/${timestamp}/original.png`;
+      const processedKey = `users/${session.user.id}/projects/${timestamp}/processed.png`;
+      const thumbKey = processedKey; // Use processed as thumb for now
+
+      await s3Service.uploadImage(originalBlob, originalKey);
+      setCloudProgress(60);
+      if (processedBlob) {
+        await s3Service.uploadImage(processedBlob, processedKey);
+      }
+      setCloudProgress(80);
+
+      // 3. Save to Supabase
+      const { error } = await supabase.from('projects').insert({
+        user_id: session.user.id,
+        name: projectName,
+        original_s3_key: originalKey,
+        processed_s3_key: processedKey,
+        thumbnail_s3_key: thumbKey,
+        options: options
+      });
+
+      if (error) throw error;
+
+      setCloudProgress(100);
+      setTimeout(() => {
+        setIsCloudProcessing(false);
+        setView('dashboard');
+      }, 500);
+
+    } catch (e) {
+      console.error('Save failed:', e);
+      alert('Failed to save project to Atelier Cloud.');
+      setIsCloudProcessing(false);
     }
   };
 
@@ -641,11 +895,27 @@ const App: React.FC = () => {
   };
 
   const autoTuneManually = async (targetImg?: HTMLImageElement) => {
-    const activeImg = targetImg || image;
-    if (!activeImg || !hiddenCanvasRef.current || !cloudUrl) return;
+    let activeImg = targetImg || image;
+    // Type check to prevent MouseEvent or other objects from leaking in
+    if (activeImg && !(activeImg instanceof HTMLImageElement)) {
+      activeImg = image;
+    }
 
+    if (!activeImg || !hiddenCanvasRef.current || !cloudUrl) {
+      console.warn('TraceMaster: Refine skipped - mission configuration', { hasImg: !!activeImg, hasUrl: !!cloudUrl });
+      return;
+    }
+
+    // Check Credits
+    if (!profile?.is_pro && (profile?.ai_credits || 0) <= 0) {
+      setShowNoCredits(true);
+      return;
+    }
+
+    console.log(`TraceMaster: Starting AI Refine with model: ${cloudModel}`);
     setIsCloudProcessing(true);
     setIsLoading(true);
+    setProcessedImage(''); // Clear previous result to force UI update
 
     try {
       const hCanvas = hiddenCanvasRef.current;
@@ -665,10 +935,11 @@ const App: React.FC = () => {
       }, 400);
 
       const cloudResult = await mlCloudService.processImage(hCanvas, cloudModel);
-      clearInterval(progressInterval);
-      setCloudProgress(100);
 
       if (cloudResult && cloudResult.image) {
+        clearInterval(progressInterval);
+        setCloudProgress(100);
+        console.log('TraceMaster: AI result received, distilling...');
         const resultImg = new Image();
         resultImg.src = cloudResult.image;
         await new Promise((resolve, reject) => {
@@ -685,6 +956,10 @@ const App: React.FC = () => {
           distillCloudLines(distillCanvas);
           const finalResult = distillCanvas.toDataURL('image/png');
           setProcessedImage(finalResult);
+          setSketchCanvas(distillCanvas);
+
+          // Deduct credit for Cloud HQ Refine
+          deductCredit();
 
           if (window.navigator.vibrate) window.navigator.vibrate(40);
         }
@@ -715,22 +990,58 @@ const App: React.FC = () => {
     if (window.navigator.vibrate) window.navigator.vibrate(20);
   };
 
+  if (view === 'auth') return <Auth />;
+  if (view === 'onboarding' && session) return <Onboarding userId={session.user.id} onComplete={() => fetchProfile(session.user.id)} />;
+  if (view === 'dashboard' && profile) {
+    return (
+      <ProjectsDashboard
+        onNewProject={() => {
+          setImage(null);
+          setProcessedImage(null);
+          setSketchCanvas(null);
+          setView('studio');
+        }}
+        onSelectProject={(id: string) => {
+          // Future: Load specific project
+          // For now reuse gallery logic or just studio
+          setView('studio');
+        }}
+        onLogout={handleLogout}
+        aiCredits={profile?.ai_credits ?? 0}
+      />
+    );
+  }
+
   return (
     <div className={`h-[100dvh] transition-colors duration-400 ${view === 'landing' ? 'overflow-auto' : 'flex flex-col bg-cream overflow-hidden text-sienna'}`}>
       {view === 'landing' ? (
         <LandingPage
           onStart={() => {
-            setView('studio');
-            setShowGallery(false);
+            if (isAuthLoading) return;
+            if (session && profile?.nickname) {
+              setView('dashboard');
+            } else if (session) {
+              setView('onboarding');
+            } else {
+              setView('auth');
+            }
           }}
           onFileUpload={handleFileUpload}
           onShowGallery={() => {
-            setView('studio');
-            setShowGallery(true);
+            if (isAuthLoading) return;
+            if (session && profile?.nickname) {
+              setView('dashboard');
+            } else if (session) {
+              setView('onboarding');
+            } else {
+              setView('auth');
+            }
           }}
           fileInputRef={fileInputRef}
           toggleTheme={toggleTheme}
           theme={theme}
+          isLoggedIn={!!session}
+          hasProfile={!!profile?.nickname}
         />
       ) : (
         <>
@@ -787,7 +1098,7 @@ const App: React.FC = () => {
           <StudioHeader
             theme={theme}
             toggleTheme={toggleTheme}
-            onBack={() => setView('landing')}
+            onBack={() => setView('dashboard')}
             showCamera={showCamera}
             setShowCamera={setShowCamera}
             image={image}
@@ -802,6 +1113,8 @@ const App: React.FC = () => {
             retryCamera={retryCamera}
             visible={showCamera ? uiVisible : true}
             onShowGallery={() => setShowGallery(true)}
+            onSave={handleSaveProject}
+            aiCredits={profile?.ai_credits ?? 0}
           />
 
           <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
@@ -1007,6 +1320,10 @@ const App: React.FC = () => {
           progress={cloudProgress}
           onCancel={handleCancelCloudProcessing}
         />
+      )}
+
+      {showNoCredits && (
+        <NoCreditsModal onDismiss={() => setShowNoCredits(false)} />
       )}
 
       {/* Cloud Settings Modal */}

@@ -123,7 +123,7 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
 
                                         {isCloudHQ && (
                                             <button
-                                                onClick={autoTuneManually}
+                                                onClick={() => autoTuneManually()}
                                                 className="flex items-center gap-2 px-4 py-2 bg-sienna text-cream rounded-full text-[9px] font-bold uppercase tracking-widest hover:bg-accent transition-all animate-in slide-in-from-left-2 duration-300"
                                             >
                                                 <Sparkles className="w-3.5 h-3.5" /> Refine with AI

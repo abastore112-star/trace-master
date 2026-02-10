@@ -12,7 +12,8 @@ import {
     FlipHorizontal,
     RefreshCw,
     Sliders,
-    Library
+    Library,
+    Cloud
 } from 'lucide-react';
 
 interface StudioHeaderProps {
@@ -33,13 +34,15 @@ interface StudioHeaderProps {
     retryCamera: () => void;
     visible: boolean;
     onShowGallery: () => void;
+    onSave?: () => void;
+    aiCredits: number;
 }
 
 const StudioHeader: React.FC<StudioHeaderProps> = ({
     theme, toggleTheme, onBack, showCamera, setShowCamera, image,
     fileInputRef, handleFileUpload,
     isSidebarOpen, setIsSidebarOpen, settings, setSettings, mirror, setMirror, retryCamera, visible,
-    onShowGallery
+    onShowGallery, onSave, aiCredits
 }) => {
     const [isToolsOpen, setIsToolsOpen] = React.useState(false);
 
@@ -83,11 +86,25 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
 
                 <button
                     onClick={onShowGallery}
-                    className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full bg-accent/10 hover:bg-accent hover:text-white transition-all text-accent border border-accent/20"
+                    className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-full bg-accent/10 hover:bg-accent hover:text-white transition-all text-accent border border-accent/20 relative group"
                     title="Art Library"
                 >
                     <Library className="w-4 h-4 lg:w-5 lg:h-5" />
+                    <div className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-sienna text-cream text-[8px] font-bold rounded-full border border-cream shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                        {aiCredits}
+                    </div>
                 </button>
+
+                {image && onSave && (
+                    <button
+                        onClick={onSave}
+                        className="px-6 h-10 lg:h-12 flex items-center gap-2 rounded-full bg-sienna text-cream hover:bg-accent transition-all text-[9.5px] font-bold uppercase tracking-[0.2em] shadow-lg shadow-sienna/20 hover:shadow-accent/40"
+                        title="Save to Atelier Cloud"
+                    >
+                        <Cloud className="w-4 h-4" />
+                        <span className="hidden md:inline">Save to Cloud</span>
+                    </button>
+                )}
 
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 

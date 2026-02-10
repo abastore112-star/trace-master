@@ -13,9 +13,13 @@ interface LandingPageProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   toggleTheme: () => void;
   theme: 'light' | 'dark';
+  isLoggedIn: boolean;
+  hasProfile: boolean;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, onShowGallery, fileInputRef, toggleTheme, theme }) => {
+const LandingPage: React.FC<LandingPageProps> = ({
+  onStart, onFileUpload, onShowGallery, fileInputRef, toggleTheme, theme, isLoggedIn, hasProfile
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -69,7 +73,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, onShow
             onClick={onStart}
             className="hidden md:flex px-8 py-3 bg-sienna text-cream border border-sienna/10 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-accent hover:text-sienna dark:hover:text-white transition-all shadow-xl"
           >
-            Studio
+            {isLoggedIn ? (hasProfile ? 'Dashboard' : 'Setup Profile') : 'Login'}
           </button>
 
           <button
@@ -108,8 +112,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, onShow
               onClick={() => { onStart(); setIsMenuOpen(false); }}
               className="group w-full flex flex-col items-center space-y-2 p-6 rounded-[2rem] bg-sienna text-cream active:scale-95 transition-all shadow-2xl"
             >
-              <span className="text-4xl font-light italic">AR Studio</span>
-              <span className="text-[9px] uppercase tracking-widest text-accent font-bold">Enter the Atelier</span>
+              <span className="text-4xl font-light italic">
+                {isLoggedIn ? (hasProfile ? 'Archive' : 'Settings') : 'Atelier'}
+              </span>
+              <span className="text-[9px] uppercase tracking-widest text-accent font-bold">
+                {isLoggedIn ? (hasProfile ? 'Open Library' : 'Finalize Profile') : 'Enter the Studio'}
+              </span>
             </button>
 
             <div className="grid grid-cols-1 w-full gap-4 pt-4">
@@ -142,12 +150,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onFileUpload, onShow
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 reveal delay-1 active">
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={onStart}
               className="w-full sm:w-auto group relative px-14 py-7 bg-sienna text-cream rounded-full overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-2xl"
             >
               <div className="absolute inset-0 bg-accent translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
               <span className="relative flex items-center justify-center gap-4 font-bold text-[11px] uppercase tracking-[0.3em]">
-                Begin the Vision <ArrowRight className="w-5 h-5" />
+                {isLoggedIn ? (hasProfile ? 'Back to Archive' : 'Complete Setup') : 'Begin the Vision'} <ArrowRight className="w-5 h-5" />
               </span>
             </button>
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onFileUpload} />
