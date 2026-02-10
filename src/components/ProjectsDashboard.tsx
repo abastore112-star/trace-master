@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Plus, Grid, List, Search, Clock, Trash2, Edit2, Play, Sparkles, LogOut } from 'lucide-react';
+import { Plus, Grid, List, Search, Clock, Trash2, Edit2, Play, Sparkles, LogOut, CreditCard, Zap } from 'lucide-react';
 import { s3Service } from '../services/s3Service';
+import { revenueCatService } from '../services/revenueCatService';
 
 interface Project {
     id: string;
@@ -101,7 +102,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                 )}
                             </div>
                             <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-accent rounded-full border-4 border-cream flex items-center justify-center text-white text-[10px] font-bold shadow-lg">
-                                {aiCredits}
+                                {profile?.is_pro ? '∞' : aiCredits}
                             </div>
                         </div>
                         <div className="space-y-1">
@@ -122,12 +123,31 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                 <p className="text-[8px] uppercase tracking-widest text-sienna/30 font-bold">Sketches</p>
                             </div>
                             <div className="text-center pl-2">
-                                <p className="text-xl font-bold text-accent">{aiCredits}</p>
-                                <p className="text-[8px] uppercase tracking-widest text-accent/40 font-bold">Credits</p>
+                                <p className="text-xl font-bold text-accent">{profile?.is_pro ? 'Unlimited' : aiCredits}</p>
+                                <p className="text-[8px] uppercase tracking-widest text-accent/40 font-bold">{profile?.is_pro ? 'Pro Member' : 'Credits'}</p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
+                            {profile?.is_pro ? (
+                                <button
+                                    onClick={() => revenueCatService.openCustomerCenter()}
+                                    className="px-6 py-4 bg-accent/10 hover:bg-accent/20 transition-all text-sienna flex items-center gap-3 rounded-full border border-accent/20"
+                                    title="Manage Subscription"
+                                >
+                                    <CreditCard className="w-4 h-4 text-accent" />
+                                    <span className="text-[9px] font-bold uppercase tracking-widest">Manage</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => revenueCatService.presentPaywall()}
+                                    className="px-6 py-4 bg-accent text-sienna hover:bg-sienna hover:text-accent transition-all flex items-center gap-3 rounded-full border border-accent/20 shadow-lg shadow-accent/20 animate-pulse hover:animate-none"
+                                    title="Upgrade to Pro Access"
+                                >
+                                    <Zap className="w-4 h-4" />
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-nowrap">Upgrade to Pro</span>
+                                </button>
+                            )}
                             <button
                                 onClick={onLogout}
                                 className="w-12 h-12 flex items-center justify-center rounded-full bg-sienna/5 hover:bg-sienna/10 transition-all text-sienna/60 hover:text-accent border border-sienna/10"

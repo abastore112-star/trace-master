@@ -5,6 +5,7 @@ import {
   Frame, Hand, Check, Plus, Quote,
   Zap, Palette, Menu, X, Sun, Moon
 } from 'lucide-react';
+import { revenueCatService } from './services/revenueCatService';
 
 interface LandingPageProps {
   onStart: () => void;
@@ -226,7 +227,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Reactions Section */}
-      <section id="reactions" className="py-24 lg:py-48 px-4 bg-sienna text-cream relative transition-colors duration-700">
+      <section id="reactions" className="py-24 lg:py-48 px-4 bg-sienna dark:bg-black/40 text-cream relative transition-colors duration-700">
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row justify-between items-end gap-10 mb-32 reveal">
             <div className="space-y-4">
@@ -277,7 +278,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           <div className="p-16 bg-accent text-sienna dark:text-white rounded-[4rem] space-y-12 relative overflow-hidden shadow-2xl reveal delay-1 border border-accent/40">
             <div className="space-y-4">
               <span className="text-[11px] font-bold uppercase tracking-widest text-sienna/80 dark:text-white/70">The Master</span>
-              <h3 className="text-5xl font-light italic">$19 <span className="text-base font-normal">Lifetime</span></h3>
+              <h3 className="text-5xl font-light italic">$5 <span className="text-base font-normal">Lifetime</span></h3>
             </div>
             <ul className="space-y-6 text-sm font-black dark:font-medium">
               <PricingItem text="Premium Studio Filters" />
@@ -285,7 +286,12 @@ const LandingPage: React.FC<LandingPageProps> = ({
               <PricingItem text="Spatial Lock Pro" />
               <PricingItem text="Priority Haptic Feedback" />
             </ul>
-            <button onClick={onStart} className="w-full py-6 bg-sienna text-cream dark:bg-cream dark:text-accent rounded-full text-[11px] font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-xl">Unlock Atelier</button>
+            <button
+              onClick={() => revenueCatService.presentPaywall()}
+              className="w-full py-6 bg-sienna text-cream dark:bg-cream dark:text-accent rounded-full text-[11px] font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
+            >
+              Unlock Atelier
+            </button>
           </div>
         </div>
       </section>

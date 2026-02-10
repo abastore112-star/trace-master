@@ -39,6 +39,7 @@ import { Onboarding } from './components/Onboarding';
 import { ProjectsDashboard } from './components/ProjectsDashboard';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { revenueCatService } from './services/revenueCatService';
 
 const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }> = ({ progress, onCancel }) => {
   return (
@@ -109,19 +110,29 @@ const NoCreditsModal: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => {
             <span className="text-[10px] uppercase tracking-widest font-bold text-accent">Within 24 Hours</span>
           </div>
           <div className="h-1.5 w-full bg-sienna/5 rounded-full overflow-hidden">
-            <div className="h-full bg-accent/40 w-3/4 animate-pulse" />
+            <div className="h-full bg-accent/40 w-3/4 animate-pulse relative">
+              <div className="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]" />
+            </div>
           </div>
         </div>
 
         <div className="space-y-4">
           <button
+            onClick={() => revenueCatService.presentPaywall()}
+            className="w-full py-6 bg-accent text-sienna rounded-full text-[10px] font-bold uppercase tracking-[0.2em] hover:scale-[1.02] transition-all shadow-xl shadow-accent/20 flex items-center justify-center gap-3 group"
+          >
+            Upgrade to Pro <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <button
             onClick={onDismiss}
-            className="w-full py-6 bg-sienna text-cream rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-accent hover:text-sienna transition-all shadow-xl"
+            className="w-full py-6 bg-sienna/5 text-sienna/60 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-sienna/10 transition-all"
           >
             Continue with Local Sketch
           </button>
+
           <p className="text-center text-[8px] uppercase tracking-widest text-sienna/30 font-bold">
-            Pro access for unlimited extraction coming soon
+            Unlock unlimited Cloud HQ extraction
           </p>
         </div>
       </div>
@@ -280,10 +291,14 @@ const App: React.FC = () => {
       setSession(session);
       if (session) {
         fetchProfile(session.user.id);
+        revenueCatService.configure(session.user.id).then(() => {
+          syncProStatus();
+        });
       } else {
         setProfile(null);
         setView('landing');
         setIsAuthLoading(false);
+        revenueCatService.logout();
       }
     });
 
@@ -319,6 +334,33 @@ const App: React.FC = () => {
         setView('dashboard');
       }
       setIsAuthLoading(false);
+
+      // Initial Pro check
+      if (session) {
+        revenueCatService.configure(session.user.id).then(() => {
+          syncProStatus();
+        });
+      }
+    }
+  };
+
+  const syncProStatus = async () => {
+    const isPro = await revenueCatService.checkProStatus();
+    if (session && profile && profile.is_pro !== isPro) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ is_pro: isPro })
+        .eq('id', session.user.id)
+        .select()
+        .single();
+
+      if (!error && data) {
+        setProfile(data);
+        console.log("RevenueCat: Pro status synced with database", isPro);
+      }
+    } else if (profile && profile.is_pro !== isPro) {
+      // Just update local state if profile is loaded but not saved yet
+      setProfile(prev => prev ? ({ ...prev, is_pro: isPro }) : null);
     }
   };
 
