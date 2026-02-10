@@ -990,6 +990,81 @@ const App: React.FC = () => {
     if (window.navigator.vibrate) window.navigator.vibrate(20);
   };
 
+  const handleSelectProject = async (id: string, projectData?: any) => {
+    setIsLoading(true);
+    try {
+      let project = projectData;
+
+      // If projectData is not complete or not provided, fetch it
+      if (!project || !project.original_s3_key) {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', id)
+          .single();
+        if (error) throw error;
+        project = data;
+      }
+
+      // Reset studio state
+      setImage(null);
+      setProcessedImage(null);
+      setSketchCanvas(null);
+
+      // Load original image from S3
+      if (project.original_s3_key) {
+        const originalUrl = await s3Service.getPresignedUrl(project.original_s3_key);
+        const originalImg = new Image();
+        originalImg.crossOrigin = "anonymous";
+        originalImg.src = originalUrl;
+        await new Promise((resolve, reject) => {
+          originalImg.onload = resolve;
+          originalImg.onerror = reject;
+        });
+        setImage(originalImg);
+      }
+
+      // Load processed image from S3
+      if (project.processed_s3_key) {
+        const processedUrl = await s3Service.getPresignedUrl(project.processed_s3_key);
+        setProcessedImage(processedUrl);
+
+        // Reconstruct sketchCanvas from processed image for continuation
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = processedUrl;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          setSketchCanvas(canvas);
+        }
+      }
+
+      // Restore options
+      if (project.options) {
+        setOptions(prev => ({
+          ...prev,
+          ...project.options
+        }));
+      }
+
+      setView('studio');
+      if (window.navigator.vibrate) window.navigator.vibrate(50);
+    } catch (err) {
+      console.error('TraceMaster: Failed to load project:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (view === 'auth') return <Auth />;
   if (view === 'onboarding' && session) return <Onboarding userId={session.user.id} onComplete={() => fetchProfile(session.user.id)} />;
   if (view === 'dashboard' && profile) {
@@ -1001,13 +1076,10 @@ const App: React.FC = () => {
           setSketchCanvas(null);
           setView('studio');
         }}
-        onSelectProject={(id: string) => {
-          // Future: Load specific project
-          // For now reuse gallery logic or just studio
-          setView('studio');
-        }}
+        onSelectProject={handleSelectProject}
         onLogout={handleLogout}
         aiCredits={profile?.ai_credits ?? 0}
+        profile={profile}
       />
     );
   }
