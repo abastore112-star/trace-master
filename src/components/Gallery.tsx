@@ -130,18 +130,23 @@ const Gallery: React.FC<GalleryProps> = ({ onSelect, onClose }) => {
                                     }}
                                     className="group relative w-full rounded-[1.5rem] md:rounded-[2.5rem] bg-white/40 border border-white/20 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 text-left"
                                 >
-                                    <div className="relative aspect-auto">
+                                    <div className="relative aspect-auto bg-sienna/5">
                                         <img
-                                            src={item.thumb}
+                                            src={`${item.thumb}?width=400&height=500&resize=contain`}
                                             alt={item.title}
-                                            className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
+                                            className="w-full h-auto object-cover transition-all duration-700 group-hover:scale-105 opacity-0"
                                             loading="lazy"
+                                            onLoad={(e) => {
+                                                const img = e.currentTarget;
+                                                img.classList.remove('opacity-0');
+                                                img.parentElement?.classList.remove('bg-sienna/5');
+                                            }}
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-sienna/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-4 md:p-8">
                                             <div className="flex items-center justify-between gap-2 md:gap-4">
                                                 <div>
                                                     <p className="text-[7px] md:text-[8px] font-bold uppercase tracking-[0.3em] text-accent mb-0.5 md:mb-1">{item.category}</p>
-                                                    <h4 className="text-white text-sm md:text-lg font-light italic leading-tight">{item.title}</h4>
+                                                    <h4 className="text-white text-xs md:text-sm font-light italic leading-tight">{item.title}</h4>
                                                 </div>
                                                 <div className="p-2 md:p-3 bg-accent rounded-full text-sienna shadow-xl transform translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-500 delay-100 hidden md:block">
                                                     <ChevronRight className="w-4 h-4 md:w-5 md:h-5 border-none" />
