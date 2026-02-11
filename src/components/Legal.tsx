@@ -102,7 +102,7 @@ const TermsOfService = () => (
             <p>You retain full ownership of the artwork you create using our tools. TraceMaster does not claim copyright over your physical sketches or digital traced outputs. You are responsible for the references you use.</p>
         </Section>
         <Section title="4. Pro Subscriptions">
-            <p>TraceMaster Pro is a lifetime or recurring access tier. Pro activation grants unlimited AI Energy (Cloud HQ Refinement). Access is tied to your account and is non-transferable.</p>
+            <p>TraceMaster Pro is available via direct consultation. Pro activation grants unlimited AI Energy (Cloud HQ Refinement). Access is tied to your account and is non-transferable. Contact us to discuss pricing and activation.</p>
         </Section>
         <Section title="5. Prohibited Use">
             <p>You may not use our Atelier for any illegal purpose, or to automate copyright infringement at scale. We honor the friction of lead on paper; don't break the magic.</p>
@@ -117,7 +117,7 @@ const PrivacyPolicy = () => (
             <ul className="list-disc pl-5 space-y-2">
                 <li>Auth Credentials (via Google/Supabase)</li>
                 <li>Atelier Assets (Sketches you choose to save to Cloud)</li>
-                <li>Subscription Status (via RevenueCat)</li>
+                <li>AI Processing Credits (tracked via Supabase)</li>
             </ul>
         </Section>
         <Section title="2. Usage">
@@ -135,16 +135,16 @@ const PrivacyPolicy = () => (
 const RefundPolicy = () => (
     <div className="space-y-12">
         <Section title="1. Digital Goods">
-            <p>TraceMaster Pro and AI Credits are digital services. Due to the immediate nature of digital access and processing costs, we generally do not offer refunds once the service has been used.</p>
+            <p>TraceMaster Pro and AI Credits are digital services. Due to the immediate nature of digital access and processing costs, we generally do not offer refunds once the service has been activated or used.</p>
         </Section>
         <Section title="2. Pro Membership">
-            <p>If you encounter technical failure or purchased in error, contact us within 24 hours. If no Cloud HQ processing has been utilized, we may grant a refund at our discretion.</p>
+            <p>Pro membership is activated after direct consultation and payment. If you encounter technical failure or purchased in error, contact us within 24 hours. If no Cloud HQ processing has been utilized, we may grant a refund at our discretion.</p>
         </Section>
-        <Section title="3. Subscription Cycles">
-            <p>Cancellations for recurring plans take effect at the end of the current billing cycle. No partial refunds are provided for unused time.</p>
+        <Section title="3. Service Continuity">
+            <p>Pro memberships are typically lifetime or negotiated term-based. There are no automatic recurring charges. Any cancellations or service modifications must be discussed directly with our team.</p>
         </Section>
         <Section title="4. Support">
-            <p>We are artists, not just developers. If you have an issue, reach out. We value the human touch over automated rejection.</p>
+            <p>We are artists, not just developers. If you have an issue, reach out directly via the contact information provided. We value the human touch over automated rejection.</p>
         </Section>
     </div>
 );

@@ -39,8 +39,8 @@ import { Onboarding } from './components/Onboarding';
 import { ProjectsDashboard } from './components/ProjectsDashboard';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { revenueCatService } from './services/revenueCatService';
 import { Legal } from './components/Legal';
+import { ContactUpgradeModal } from './components/ContactUpgradeModal';
 
 const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }> = ({ progress, onCancel }) => {
   return (
@@ -85,7 +85,7 @@ const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }>
   );
 };
 
-const NoCreditsModal: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => {
+const NoCreditsModal: React.FC<{ onDismiss: () => void; onShowUpgrade: () => void }> = ({ onDismiss, onShowUpgrade }) => {
   return (
     <div className="fixed inset-0 z-[6000] flex items-center justify-center bg-sienna/20 backdrop-blur-xl p-6 animate-in fade-in duration-500">
       <div className="w-full max-w-md bg-cream rounded-[4rem] p-12 space-y-10 shadow-2xl relative overflow-hidden border border-sienna/10">
@@ -119,7 +119,7 @@ const NoCreditsModal: React.FC<{ onDismiss: () => void }> = ({ onDismiss }) => {
 
         <div className="space-y-4">
           <button
-            onClick={() => revenueCatService.presentPaywall()}
+            onClick={onShowUpgrade}
             className="w-full py-6 bg-accent text-sienna rounded-full text-[10px] font-bold uppercase tracking-[0.2em] hover:scale-[1.02] transition-all shadow-xl shadow-accent/20 flex items-center justify-center gap-3 group"
           >
             Upgrade to Pro <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -233,6 +233,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [showNoCredits, setShowNoCredits] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [options, setOptions] = useState<ProcessingOptions>({
     threshold: 45,
@@ -293,14 +294,10 @@ const App: React.FC = () => {
       setSession(session);
       if (session) {
         fetchProfile(session.user.id);
-        revenueCatService.configure(session.user.id).then(() => {
-          syncProStatus();
-        });
       } else {
         setProfile(null);
         setView('landing');
         setIsAuthLoading(false);
-        revenueCatService.logout();
       }
     });
 
@@ -350,39 +347,13 @@ const App: React.FC = () => {
 
       if (!data?.nickname) {
         setView('onboarding');
-      } else if (view === 'auth') {
+      } else if (view === 'auth' || view === 'onboarding') {
         setView('dashboard');
       }
       setIsAuthLoading(false);
-
-      // Initial Pro check
-      if (session) {
-        revenueCatService.configure(session.user.id).then(() => {
-          syncProStatus();
-        });
-      }
     }
   };
 
-  const syncProStatus = async () => {
-    const isPro = await revenueCatService.checkProStatus();
-    if (session && profile && profile.is_pro !== isPro) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ is_pro: isPro })
-        .eq('id', session.user.id)
-        .select()
-        .single();
-
-      if (!error && data) {
-        setProfile(data);
-        console.log("RevenueCat: Pro status synced with database", isPro);
-      }
-    } else if (profile && profile.is_pro !== isPro) {
-      // Just update local state if profile is loaded but not saved yet
-      setProfile(prev => prev ? ({ ...prev, is_pro: isPro }) : null);
-    }
-  };
 
   const refillCredits = async (userId: string) => {
     const { data, error } = await supabase
@@ -454,6 +425,11 @@ const App: React.FC = () => {
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
 
+        // Pre-load image for use in both cloud and local processing
+        const img = new Image();
+        img.src = base64;
+        await new Promise((resolve) => img.onload = resolve);
+
         // If Cloud HQ is enabled, process via cloud
         if (isCloudHQ && cloudUrl) {
           // Check Credits
@@ -467,11 +443,6 @@ const App: React.FC = () => {
 
           setIsCloudProcessing(true);
           try {
-            // Create a temp canvas to hold the image
-            const img = new Image();
-            img.src = base64;
-            await new Promise((resolve) => img.onload = resolve);
-
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = img.width;
             tempCanvas.height = img.height;
@@ -530,9 +501,6 @@ const App: React.FC = () => {
         }
 
         // Local processing fallback
-        const img = new Image();
-        img.src = base64;
-        await new Promise((resolve) => img.onload = resolve);
         setPendingUpload({ img, base64 });
         setSelectionModalOpen(true);
         setIsLoading(false);
@@ -554,78 +522,77 @@ const App: React.FC = () => {
       reader.onloadend = async () => {
         const base64 = reader.result as string;
 
-        // If Cloud HQ is enabled
-        if (isCloudHQ && cloudUrl) {
-          setIsCloudProcessing(true);
-          try {
-            const img = new Image();
-            img.src = base64;
-            await new Promise((resolve) => img.onload = resolve);
-
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
-            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-            if (tempCtx) {
-              tempCtx.drawImage(img, 0, 0);
-
-              // Start perceptual progress
+        // Parallelize asset fetching and processing
+        const [img, cloudResult] = await Promise.all([
+          (async () => {
+            const tempImg = new Image();
+            tempImg.src = base64;
+            await new Promise((resolve) => tempImg.onload = resolve);
+            return tempImg;
+          })(),
+          (async () => {
+            if (isCloudHQ && cloudUrl) {
+              setIsCloudProcessing(true);
               setCloudProgress(0);
               const progressInterval = setInterval(() => {
-                setCloudProgress(prev => {
-                  if (prev >= 92) return prev;
-                  return prev + (Math.random() * 5);
-                });
+                setCloudProgress(prev => (prev >= 92 ? prev : prev + Math.random() * 5));
               }, 400);
 
-              const cloudResult = await mlCloudService.processImage(tempCanvas, cloudModel);
+              const imgToProcess = new Image();
+              imgToProcess.src = base64;
+              await new Promise(r => imgToProcess.onload = r);
+
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = imgToProcess.width;
+              tempCanvas.height = imgToProcess.height;
+              tempCanvas.getContext('2d')?.drawImage(imgToProcess, 0, 0);
+
+              const result = await mlCloudService.processImage(tempCanvas, cloudModel);
               clearInterval(progressInterval);
               setCloudProgress(100);
-
-              if (cloudResult && cloudResult.image) {
-                const resultImg = new Image();
-                resultImg.src = cloudResult.image;
-                await new Promise((resolve, reject) => {
-                  resultImg.onload = resolve;
-                  resultImg.onerror = reject;
-                });
-
-                const distillCanvas = document.createElement('canvas');
-                distillCanvas.width = resultImg.width;
-                distillCanvas.height = resultImg.height;
-                const dCtx = distillCanvas.getContext('2d', { willReadFrequently: true });
-                if (dCtx) {
-                  dCtx.drawImage(resultImg, 0, 0);
-                  distillCloudLines(distillCanvas); // STRIP GRAY BACKGROUND
-                  const finalResult = distillCanvas.toDataURL('image/png');
-
-                  setImage(img);
-                  setProcessedImage(finalResult);
-                  setSketchCanvas(distillCanvas);
-                  setOriginalBase64(base64);
-                  setView('studio');
-                  setIsLoading(false);
-                  setTimeout(() => setIsCloudProcessing(false), 500);
-                  if (window.navigator.vibrate) window.navigator.vibrate(40);
-                  return;
-                }
-              }
+              return result;
             }
-          } catch (err) {
-            console.error('Cloud processing failed:', err);
-          } finally {
-            setIsCloudProcessing(false);
+            return null;
+          })()
+        ]);
+
+        if (cloudResult && cloudResult.image) {
+          const resultImg = new Image();
+          resultImg.src = cloudResult.image;
+          await new Promise((resolve, reject) => {
+            resultImg.onload = resolve;
+            resultImg.onerror = reject;
+          });
+
+          const distillCanvas = document.createElement('canvas');
+          distillCanvas.width = resultImg.width;
+          distillCanvas.height = resultImg.height;
+          const dCtx = distillCanvas.getContext('2d', { willReadFrequently: true });
+          if (dCtx) {
+            dCtx.drawImage(resultImg, 0, 0);
+            distillCloudLines(distillCanvas);
+            const finalResult = distillCanvas.toDataURL('image/png');
+
+            setImage(img);
+            setProcessedImage(finalResult);
+            setSketchCanvas(distillCanvas);
+            setOriginalBase64(base64);
+            setView('studio');
+            setIsLoading(false);
+            setTimeout(() => setIsCloudProcessing(false), 500);
+            if (window.navigator.vibrate) window.navigator.vibrate(40);
+            return;
           }
         }
 
         // Local processing fallback
-        const img = new Image();
-        img.src = base64;
-        await new Promise((resolve) => img.onload = resolve);
+        const fallbackImg = new Image();
+        fallbackImg.src = base64;
+        await new Promise((resolve) => fallbackImg.onload = resolve);
 
         setOriginalBase64(base64);
-        setImage(img);
-        setPalette(extractPalette(img));
+        setImage(fallbackImg);
+        setPalette(extractPalette(fallbackImg));
 
         const screenWidth = window.innerWidth * 0.8;
         const screenHeight = window.innerHeight * 0.8;
@@ -1073,41 +1040,46 @@ const App: React.FC = () => {
       setProcessedImage(null);
       setSketchCanvas(null);
 
-      // Load original image from S3
-      if (project.original_s3_key) {
-        const originalUrl = await s3Service.getPresignedUrl(project.original_s3_key);
-        const originalImg = new Image();
-        originalImg.crossOrigin = "anonymous";
-        originalImg.src = originalUrl;
-        await new Promise((resolve, reject) => {
-          originalImg.onload = resolve;
-          originalImg.onerror = reject;
-        });
-        setImage(originalImg);
-      }
+      // Parallelize S3 pre-signed URL generation and image loading
+      const [originalImg, processedImgData] = await Promise.all([
+        (async () => {
+          if (!project.original_s3_key) return null;
+          const url = await s3Service.getPresignedUrl(project.original_s3_key);
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = url;
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          return img;
+        })(),
+        (async () => {
+          if (!project.processed_s3_key) return null;
+          const url = await s3Service.getPresignedUrl(project.processed_s3_key);
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = url;
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
 
-      // Load processed image from S3
-      if (project.processed_s3_key) {
-        const processedUrl = await s3Service.getPresignedUrl(project.processed_s3_key);
-        setProcessedImage(processedUrl);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+          }
+          return { url, canvas };
+        })()
+      ]);
 
-        // Reconstruct sketchCanvas from processed image for continuation
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = processedUrl;
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          setSketchCanvas(canvas);
-        }
+      if (originalImg) setImage(originalImg);
+      if (processedImgData) {
+        setProcessedImage(processedImgData.url);
+        setSketchCanvas(processedImgData.canvas);
       }
 
       // Restore options
@@ -1144,6 +1116,7 @@ const App: React.FC = () => {
         }}
         onSelectProject={handleSelectProject}
         onLogout={handleLogout}
+        onUpgrade={() => setShowUpgradeModal(true)}
         aiCredits={profile?.ai_credits ?? 0}
         profile={profile}
       />
@@ -1152,6 +1125,9 @@ const App: React.FC = () => {
 
   return (
     <div className={`h-[100dvh] transition-colors duration-400 ${view === 'landing' ? 'overflow-auto' : 'flex flex-col bg-cream overflow-hidden text-sienna'}`}>
+      {showUpgradeModal && <ContactUpgradeModal onClose={() => setShowUpgradeModal(false)} />}
+      {showNoCredits && <NoCreditsModal onDismiss={() => setShowNoCredits(false)} onShowUpgrade={() => { setShowNoCredits(false); setShowUpgradeModal(true); }} />}
+
       {view === 'landing' ? (
         <LandingPage
           onStart={() => {
@@ -1165,6 +1141,7 @@ const App: React.FC = () => {
             }
           }}
           onFileUpload={handleFileUpload}
+          onUpgrade={() => setShowUpgradeModal(true)}
           onShowGallery={() => {
             if (isAuthLoading) return;
             if (session && profile?.nickname) {

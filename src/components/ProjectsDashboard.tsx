@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Plus, Grid, List, Search, Clock, Trash2, Edit2, Play, Sparkles, LogOut, CreditCard, Zap } from 'lucide-react';
 import { s3Service } from '../services/s3Service';
-import { revenueCatService } from '../services/revenueCatService';
 
 interface Project {
     id: string;
@@ -21,6 +20,7 @@ interface ProjectsDashboardProps {
     onLogout: () => void;
     aiCredits: number;
     profile: any;
+    onUpgrade: () => void;
 }
 
 export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
@@ -28,27 +28,37 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onSelectProject,
     onLogout,
     aiCredits,
-    profile
+    profile,
+    onUpgrade
 }) => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [hasMore, setHasMore] = useState(true);
+    const [page, setPage] = useState(0);
+    const ITEMS_PER_PAGE = 12;
 
     useEffect(() => {
-        fetchProjects();
+        fetchProjects(true);
     }, []);
 
-    const fetchProjects = async () => {
+    const fetchProjects = async (reset = false) => {
+        const currentPage = reset ? 0 : page;
         setIsLoading(true);
-        const { data, error } = await supabase
+
+        const from = currentPage * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE - 1;
+
+        const { data, error, count } = await supabase
             .from('projects')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, to);
 
         if (error) {
             console.error('Failed to fetch projects:', error);
         } else if (data) {
-            // Resolve thumbnail URLs
+            // Resolve thumbnail URLs in batches
             const projectsWithUrls = await Promise.all(data.map(async (p: any) => {
                 if (p.thumbnail_s3_key) {
                     try {
@@ -61,7 +71,18 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 }
                 return p;
             }));
-            setProjects(projectsWithUrls);
+
+            if (reset) {
+                setProjects(projectsWithUrls);
+                setPage(1);
+            } else {
+                setProjects(prev => [...prev, ...projectsWithUrls]);
+                setPage(prev => prev + 1);
+            }
+
+            // Check if there are more items
+            const totalFetched = reset ? projectsWithUrls.length : projects.length + projectsWithUrls.length;
+            setHasMore(totalFetched < (count || 0));
         }
         setIsLoading(false);
     };
@@ -131,16 +152,16 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         <div className="flex items-center gap-3">
                             {profile?.is_pro ? (
                                 <button
-                                    onClick={() => revenueCatService.openCustomerCenter()}
+                                    onClick={onUpgrade}
                                     className="px-6 py-4 bg-accent/10 hover:bg-accent/20 transition-all text-sienna flex items-center gap-3 rounded-full border border-accent/20"
                                     title="Manage Subscription"
                                 >
                                     <CreditCard className="w-4 h-4 text-accent" />
-                                    <span className="text-[9px] font-bold uppercase tracking-widest">Manage</span>
+                                    <span className="text-[9px] font-bold uppercase tracking-widest">Master Status</span>
                                 </button>
                             ) : (
                                 <button
-                                    onClick={() => revenueCatService.presentPaywall()}
+                                    onClick={onUpgrade}
                                     className="px-6 py-4 bg-accent text-sienna hover:bg-sienna hover:text-accent transition-all flex items-center gap-3 rounded-full border border-accent/20 shadow-lg shadow-accent/20 animate-pulse hover:animate-none"
                                     title="Upgrade to Pro Access"
                                 >
@@ -247,6 +268,21 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Load More Button */}
+                    {!isLoading && hasMore && filteredProjects.length > 0 && (
+                        <div className="flex justify-center pt-12">
+                            <button
+                                onClick={() => fetchProjects(false)}
+                                className="px-12 py-5 bg-sienna/5 hover:bg-sienna hover:text-cream text-sienna rounded-full text-[11px] font-bold uppercase tracking-[0.2em] transition-all border border-sienna/10 shadow-lg"
+                            >
+                                <span className="flex items-center gap-3">
+                                    Load More Projects
+                                    <Sparkles className="w-4 h-4" />
+                                </span>
+                            </button>
                         </div>
                     )}
                 </div>

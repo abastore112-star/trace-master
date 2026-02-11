@@ -80,19 +80,28 @@ const StudioSidebar: React.FC<StudioSidebarProps> = ({
         fixed lg:static inset-x-0 bottom-0 lg:inset-auto
         lg:w-[420px] lg:flex flex-col gap-8 shrink-0 
         transition-all duration-700 ease-out z-[1070]
-        bg-white/60 lg:bg-transparent backdrop-blur-3xl lg:backdrop-blur-none
-        ${isSidebarOpen ? 'translate-y-0 h-[65vh] lg:h-auto opacity-100' : 'translate-y-full lg:translate-y-0 h-0 lg:h-auto opacity-0 lg:opacity-100'}
+        bg-white/80 lg:bg-transparent backdrop-blur-3xl lg:backdrop-blur-none
+        ${isSidebarOpen ? 'translate-y-0 opacity-100' : 'translate-y-full lg:translate-y-0 opacity-0 lg:opacity-100'}
         ${visible || !image ? 'lg:opacity-100' : 'opacity-0 pointer-events-none translate-y-20 lg:translate-y-0'}
-        lg:p-0 rounded-t-[4rem] lg:rounded-none lg:shadow-none touch-auto
+        rounded-t-[3rem] lg:rounded-none lg:shadow-none touch-auto
+        max-h-[75vh] lg:max-h-none
+        border-t-4 border-sienna/10 lg:border-none
+        shadow-2xl lg:shadow-none
       `}
             style={{
                 paddingLeft: 'max(0px, var(--safe-left))',
-                paddingRight: 'max(0px, var(--safe-right))'
+                paddingRight: 'max(0px, var(--safe-right)))'
             }}
         >
-            <div className="lg:hidden w-16 h-1.5 bg-sienna/30 rounded-full mx-auto mb-8 mt-6 shrink-0" onClick={() => setIsSidebarOpen(false)} />
+            {/* Mobile Drawer Handle */}
+            <div
+                className="lg:hidden flex justify-center py-4 cursor-pointer active:scale-95 transition-transform"
+                onClick={() => setIsSidebarOpen(false)}
+            >
+                <div className="w-16 h-1.5 bg-sienna/30 rounded-full" />
+            </div>
 
-            <div className="px-8 lg:px-0 flex flex-col gap-8 h-full overflow-hidden">
+            <div className="px-6 lg:px-0 flex flex-col gap-6 lg:gap-8 flex-1 overflow-y-auto pb-8 lg:pb-0 custom-scrollbar">
                 <div className="flex gap-2 p-1.5 bg-sienna/5 rounded-full border border-sienna/20 silk-panel shadow-inner shrink-0">
                     <TabButton active={activeTab === 'lens'} onClick={() => setActiveTab('lens')}>Optical</TabButton>
                     <TabButton active={activeTab === 'palette'} onClick={() => setActiveTab('palette')}>Guide</TabButton>

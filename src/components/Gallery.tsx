@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, X, ImageIcon, Sparkles, Filter, ChevronRight } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 interface GalleryItem {
     id: string;
     title: string;
     url: string;
-    thumb: string;
-}
-
-interface Category {
-    id: string;
-    name: string;
-    items: GalleryItem[];
+    category: string;
 }
 
 interface GalleryProps {
@@ -20,38 +15,69 @@ interface GalleryProps {
 }
 
 const Gallery: React.FC<GalleryProps> = ({ onSelect, onClose }) => {
-    const [categories, setCategories] = useState<Category[]>([]);
+    const [items, setItems] = useState<GalleryItem[]>([]);
+    const [categories, setCategories] = useState<{ id: string; name: string; count: number }[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        fetch('/gallery_manifest.json')
-            .then(res => res.json())
-            .then(data => {
-                setCategories(data.categories);
-                setIsLoading(false);
-            })
-            .catch(err => {
-                console.error('TraceMaster: Failed to load gallery manifest', err);
-                setIsLoading(false);
-            });
+        fetchGalleryData();
     }, []);
 
-    const filteredItems = useMemo(() => {
-        let allItems: (GalleryItem & { category: string })[] = [];
-        categories.forEach(cat => {
-            cat.items.forEach(item => {
-                allItems.push({ ...item, category: cat.id });
-            });
-        });
+    const fetchGalleryData = async () => {
+        setIsLoading(true);
+        try {
+            // Fetch all gallery items
+            const { data: galleryData, error: galleryError } = await supabase
+                .from('gallery_sketches')
+                .select('id, title, category, storage_path')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
 
-        return allItems.filter(item => {
+            if (galleryError) throw galleryError;
+
+            // Get Supabase storage base URL
+            const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public`;
+
+            // Transform to GalleryItem format
+            const transformedItems: GalleryItem[] = (galleryData || []).map(item => ({
+                id: item.id,
+                title: item.title,
+                category: item.category,
+                url: `${storageUrl}/${item.storage_path}`
+            }));
+
+            setItems(transformedItems);
+
+            // Calculate category counts
+            const categoryCounts = transformedItems.reduce((acc, item) => {
+                acc[item.category] = (acc[item.category] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+
+            const categoryList = [
+                { id: 'anime', name: 'Anime & Manga', count: categoryCounts['anime'] || 0 },
+                { id: 'cartoon', name: 'Cartoons & Kids', count: categoryCounts['cartoon'] || 0 },
+                { id: 'nature', name: 'Nature & Animals', count: categoryCounts['nature'] || 0 },
+                { id: 'general', name: 'General Objects', count: categoryCounts['general'] || 0 }
+            ].filter(cat => cat.count > 0);
+
+            setCategories(categoryList);
+        } catch (err) {
+            console.error('TraceMaster: Failed to load gallery from database', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const filteredItems = useMemo(() => {
+        return items.filter(item => {
             const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
             const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesCategory && matchesSearch;
         });
-    }, [categories, selectedCategory, searchQuery]);
+    }, [items, selectedCategory, searchQuery]);
 
     return (
         <div className="fixed inset-0 z-[3000] flex flex-col bg-cream/95 backdrop-blur-3xl animate-in fade-in duration-700">
@@ -63,7 +89,9 @@ const Gallery: React.FC<GalleryProps> = ({ onSelect, onClose }) => {
                     </div>
                     <div>
                         <h2 className="text-xl md:text-2xl font-light italic text-sienna">Perfect Source Gallery</h2>
-                        <p className="text-[8px] md:text-[10px] text-sienna/60 uppercase tracking-[0.2em] md:tracking-[0.4em]">Hand-picked, tracing-ready professional art</p>
+                        <p className="text-[8px] md:text-[10px] text-sienna/60 uppercase tracking-[0.2em] md:tracking-[0.4em]">
+                            {isLoading ? 'Loading...' : `${items.length} Hand-picked, tracing-ready artworks`}
+                        </p>
                     </div>
                 </div>
                 <button
@@ -82,7 +110,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelect, onClose }) => {
                         onClick={() => setSelectedCategory('all')}
                         className={`px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${selectedCategory === 'all' ? 'bg-accent text-sienna shadow-lg' : 'text-sienna/60 hover:text-sienna'}`}
                     >
-                        All
+                        All ({items.length})
                     </button>
                     {categories.map(cat => (
                         <button
@@ -90,7 +118,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelect, onClose }) => {
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${selectedCategory === cat.id ? 'bg-accent text-sienna shadow-lg' : 'text-sienna/60 hover:text-sienna'}`}
                         >
-                            {cat.name}
+                            {cat.name} ({cat.count})
                         </button>
                     ))}
                 </div>
@@ -132,7 +160,7 @@ const Gallery: React.FC<GalleryProps> = ({ onSelect, onClose }) => {
                                 >
                                     <div className="relative aspect-auto bg-sienna/5">
                                         <img
-                                            src={`${item.thumb}?width=400&height=500&resize=contain`}
+                                            src={`${item.url}?width=400&height=500&resize=contain`}
                                             alt={item.title}
                                             className="w-full h-auto object-cover transition-all duration-700 group-hover:scale-105 opacity-0"
                                             loading="lazy"

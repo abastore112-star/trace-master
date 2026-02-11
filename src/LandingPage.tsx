@@ -5,7 +5,6 @@ import {
   Frame, Hand, Check, Plus, Quote,
   Zap, Palette, Menu, X, Sun, Moon
 } from 'lucide-react';
-import { revenueCatService } from './services/revenueCatService';
 
 interface LandingPageProps {
   onStart: () => void;
@@ -16,10 +15,11 @@ interface LandingPageProps {
   theme: 'light' | 'dark';
   isLoggedIn: boolean;
   hasProfile: boolean;
+  onUpgrade: () => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({
-  onStart, onFileUpload, onShowGallery, fileInputRef, toggleTheme, theme, isLoggedIn, hasProfile
+  onStart, onFileUpload, onShowGallery, fileInputRef, toggleTheme, theme, isLoggedIn, hasProfile, onUpgrade
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -287,7 +287,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               <PricingItem text="Priority Haptic Feedback" />
             </ul>
             <button
-              onClick={() => revenueCatService.presentPaywall()}
+              onClick={onUpgrade}
               className="w-full py-6 bg-sienna text-cream dark:bg-cream dark:text-accent rounded-full text-[11px] font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
             >
               Unlock Atelier
