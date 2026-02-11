@@ -1235,64 +1235,10 @@ const App: React.FC = () => {
           <div className="flex-1 flex p-3 lg:p-8 gap-8 overflow-hidden relative no-flicker">
             <div className="flex-1 relative silk-panel rounded-[2rem] lg:rounded-[4rem] overflow-hidden group bg-white/10 shadow-2xl">
               {!image ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-start p-8 md:p-12 text-center space-y-12 animate-in zoom-in slide-in-from-bottom-10 duration-1000 overflow-y-auto custom-scrollbar">
-                  <div className="space-y-4 max-w-2xl mt-12">
-                    <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6 silk-panel border-accent/20">
-                      <Sparkles className="w-6 h-6 text-accent" />
-                    </div>
-                    <h3 className="text-4xl lg:text-6xl font-light italic text-sienna tracking-tight">Enter the Atelier.</h3>
-                    <p className="text-[10px] lg:text-xs text-sienna/60 uppercase tracking-[0.6em] font-bold">Choose your path to begin the projection.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-10 w-full max-w-4xl px-4">
-                    {/* Option 1: Curated Library */}
-                    <button
-                      onClick={() => setShowGallery(true)}
-                      className="group relative h-56 sm:h-72 lg:h-96 rounded-[3rem] lg:rounded-[4rem] overflow-hidden border border-sienna/10 bg-white/40 hover:bg-white/80 transition-all duration-700 shadow-2xl hover:-translate-y-2"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-accent/30 via-transparent to-transparent group-hover:scale-110 transition-transform duration-1000" />
-                      <div className="relative h-full flex flex-col items-center justify-center p-8 space-y-6">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[2rem] bg-accent/20 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all duration-500 shadow-inner">
-                          <Library className="w-8 h-8 sm:w-10 sm:h-10" />
-                        </div>
-                        <div className="text-center space-y-2">
-                          <h4 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.2em] text-sienna">The Archive</h4>
-                          <p className="text-[10px] uppercase tracking-widest text-sienna/50 font-bold">Curated Master Sketches</p>
-                        </div>
-                        <div className="pt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
-                          <span className="px-6 py-2 bg-sienna text-cream text-[9px] font-bold uppercase tracking-widest rounded-full">Explore Gallery</span>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Option 2: Upload */}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="group relative h-56 sm:h-72 lg:h-96 rounded-[3rem] lg:rounded-[4rem] overflow-hidden border border-sienna/10 bg-white/40 hover:bg-white/80 transition-all duration-700 shadow-2xl hover:-translate-y-2"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-sienna/10 via-transparent to-transparent group-hover:scale-110 transition-transform duration-1000" />
-                      <div className="relative h-full flex flex-col items-center justify-center p-8 space-y-6">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[2rem] bg-sienna/10 flex items-center justify-center text-sienna/60 group-hover:bg-sienna group-hover:text-white transition-all duration-500 shadow-inner">
-                          <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10" />
-                        </div>
-                        <div className="text-center space-y-2">
-                          <h4 className="text-xl sm:text-2xl font-bold uppercase tracking-[0.2em] text-sienna">Your Vision</h4>
-                          <p className="text-[10px] uppercase tracking-widest text-sienna/50 font-bold">Upload Local Art Files</p>
-                        </div>
-                        <div className="pt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
-                          <span className="px-6 py-2 bg-accent text-sienna text-[9px] font-bold uppercase tracking-widest rounded-full">Choose Image</span>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col items-center space-y-4 animate-in fade-in slide-in-from-top-4 duration-1000 delay-500">
-                    {isCloudProcessing && (
-                      <div className="flex items-center gap-3 text-accent animate-pulse">
-                        <div className="w-2 h-2 bg-accent rounded-full animate-bounce" />
-                        <span className="text-[10px] uppercase font-bold tracking-[0.3em]">Processing on Atelier Cloud...</span>
-                      </div>
-                    )}
+                <div className="absolute inset-0 flex items-center justify-center p-8">
+                  <div className="text-center space-y-6 animate-pulse">
+                    <Sparkles className="w-16 h-16 text-sienna/20 mx-auto" />
+                    <p className="text-sm text-sienna/40 font-medium">Loading Atelier...</p>
                   </div>
                 </div>
               ) : (
@@ -1368,6 +1314,80 @@ const App: React.FC = () => {
           onSelect={handleGallerySelect}
           onClose={() => setShowGallery(false)}
         />
+      )}
+
+      {/* Studio Entrance - No Image State */}
+      {view === 'studio' && !image && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-cream p-4 sm:p-6 lg:p-12 overflow-y-auto">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(181,130,103,0.1),_transparent_70%)] animate-pulse" />
+
+          <div className="relative w-full max-w-6xl mx-auto space-y-8 sm:space-y-12 lg:space-y-16 py-8 sm:py-12 animate-in zoom-in slide-in-from-bottom-10 duration-1000">
+            {/* Title */}
+            <div className="text-center space-y-3 sm:space-y-4 px-4 max-w-4xl mx-auto">
+              <h3 className="text-3xl sm:text-4xl lg:text-6xl font-light italic text-sienna tracking-tight break-words">Enter the Atelier.</h3>
+              <p className="text-[10px] sm:text-xs text-sienna/60 uppercase tracking-[0.3em] sm:tracking-[0.5em] lg:tracking-[0.6em] font-bold break-words">Choose your path to begin the projection.</p>
+            </div>
+
+            {/* Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 px-4 sm:px-6 lg:px-12">
+              {/* The Archive Card */}
+              <button
+                onClick={() => setShowGallery(true)}
+                className="group relative silk-panel rounded-[3rem] sm:rounded-[4rem] lg:rounded-[5rem] p-8 sm:p-12 lg:p-16 space-y-6 sm:space-y-8 lg:space-y-12 transition-all duration-700
+                  hover:shadow-2xl hover:-translate-y-2 border-2 border-sienna/10 hover:border-accent/30 bg-gradient-to-br from-accent/5 to-transparent
+                  min-h-[280px] sm:min-h-[320px] lg:min-h-[400px] flex flex-col items-center justify-center text-center
+                  active:scale-95 touch-manipulation"
+              >
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-accent/10 rounded-3xl sm:rounded-[2rem] lg:rounded-[2.5rem] flex items-center justify-center
+                  group-hover:bg-accent/20 transition-all duration-500 group-hover:rotate-3 border-2 border-accent/20">
+                  <Library className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-accent group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="space-y-3 sm:space-y-4">
+                  <h4 className="text-xl sm:text-2xl lg:text-3xl font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-sienna group-hover:text-accent transition-colors">
+                    The Archive
+                  </h4>
+                  <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em] text-sienna/50 font-bold leading-relaxed">
+                    Curated Master Sketches
+                  </p>
+                </div>
+                <div className="absolute inset-0 rounded-[3rem] sm:rounded-[4rem] lg:rounded-[5rem] bg-gradient-to-br from-accent/0 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              </button>
+
+              {/* Your Vision Card */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="group relative silk-panel rounded-[3rem] sm:rounded-[4rem] lg:rounded-[5rem] p-8 sm:p-12 lg:p-16 space-y-6 sm:space-y-8 lg:space-y-12 transition-all duration-700
+                  hover:shadow-2xl hover:-translate-y-2 border-2 border-sienna/10 hover:border-accent/30 bg-gradient-to-br from-sienna/5 to-transparent
+                  min-h-[280px] sm:min-h-[320px] lg:min-h-[400px] flex flex-col items-center justify-center text-center
+                  active:scale-95 touch-manipulation"
+              >
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-sienna/10 rounded-3xl sm:rounded-[2rem] lg:rounded-[2.5rem] flex items-center justify-center
+                  group-hover:bg-sienna/20 transition-all duration-500 group-hover:rotate-3 border-2 border-sienna/20">
+                  <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-sienna group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="space-y-3 sm:space-y-4">
+                  <h4 className="text-xl sm:text-2xl lg:text-3xl font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-sienna group-hover:text-accent transition-colors">
+                    Your Vision
+                  </h4>
+                  <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em] text-sienna/50 font-bold leading-relaxed">
+                    Upload Local Art Files
+                  </p>
+                </div>
+                <div className="absolute inset-0 rounded-[3rem] sm:rounded-[4rem] lg:rounded-[5rem] bg-gradient-to-br from-sienna/0 to-sienna/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              </button>
+            </div>
+
+            {/* Footer Navigation */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-center px-4">
+              {isCloudProcessing && (
+                <div className="flex items-center gap-3 text-accent animate-pulse">
+                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce" />
+                  <span className="text-[10px] uppercase font-bold tracking-[0.3em]">Processing on Atelier Cloud...</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Upload Selection Modal */}
