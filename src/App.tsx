@@ -41,6 +41,7 @@ import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { Legal } from './components/Legal';
 import { ContactUpgradeModal } from './components/ContactUpgradeModal';
+import AdminPanel from './components/AdminPanel';
 
 const CloudProgressOverlay: React.FC<{ progress: number; onCancel: () => void }> = ({ progress, onCancel }) => {
   return (
@@ -204,7 +205,7 @@ const SketchPreview: React.FC<{
 
 const App: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<'landing' | 'auth' | 'dashboard' | 'studio' | 'onboarding' | 'legal'>('landing');
+  const [view, setView] = useState<'landing' | 'auth' | 'dashboard' | 'studio' | 'onboarding' | 'legal' | 'admin'>('landing');
   const [legalTab, setLegalTab] = useState<'terms' | 'privacy' | 'refund'>('terms');
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -1117,8 +1118,9 @@ const App: React.FC = () => {
         onSelectProject={handleSelectProject}
         onLogout={handleLogout}
         onUpgrade={() => setShowUpgradeModal(true)}
-        aiCredits={profile?.ai_credits ?? 0}
+        aiCredits={profile?.is_pro ? 999 : (profile?.ai_credits || 0)}
         profile={profile}
+        onAdmin={() => setView('admin')}
       />
     );
   }
@@ -1127,6 +1129,12 @@ const App: React.FC = () => {
     <div className={`h-[100dvh] transition-colors duration-400 ${view === 'landing' ? 'overflow-auto' : 'flex flex-col bg-cream overflow-hidden text-sienna'}`}>
       {showUpgradeModal && <ContactUpgradeModal onClose={() => setShowUpgradeModal(false)} />}
       {showNoCredits && <NoCreditsModal onDismiss={() => setShowNoCredits(false)} onShowUpgrade={() => { setShowNoCredits(false); setShowUpgradeModal(true); }} />}
+      {view === 'admin' && session && (
+        <AdminPanel
+          userId={session.user.id}
+          onBack={() => setView('dashboard')}
+        />
+      )}
 
       {view === 'landing' ? (
         <LandingPage

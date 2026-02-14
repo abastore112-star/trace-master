@@ -10,7 +10,7 @@ class MLCloudService {
 
     private constructor() {
         // Default to environment variable if user hasn't set custom URL
-        const defaultUrl = import.meta.env.VITE_CLOUD_HQ_URL || '';
+        const defaultUrl = import.meta.env.VITE_CLOUD_HQ_URL || 'https://r1r21nb-tracev2.hf.space';
         this.hfToken = localStorage.getItem('tm_hf_token');
         this.spaceUrl = localStorage.getItem('tm_cloud_url') || defaultUrl;
 

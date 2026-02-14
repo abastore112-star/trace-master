@@ -21,6 +21,7 @@ interface ProjectsDashboardProps {
     aiCredits: number;
     profile: any;
     onUpgrade: () => void;
+    onAdmin?: () => void;
 }
 
 export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
@@ -29,7 +30,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onLogout,
     aiCredits,
     profile,
-    onUpgrade
+    onUpgrade,
+    onAdmin
 }) => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -150,7 +152,35 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
                             {/* New Project button - visible on all screens */}
                             <button
-                                onClick={onNewProject}
+                                onClick={() => {
+                                    const totalCount = projects.length + (hasMore ? 1 : 0); // Estimate if count not stored, but better to use the count from DB.
+                                    // Actually, let's use a ref or state for total count.
+                                    // Current code doesn't store total count in state, only hasMore.
+                                    // However, we can use the `count` returned from supabase if we store it.
+                                    // For now, let's assume the user has < 10 projects if they are hitting the limit.
+                                    // A safer check is: if not pro, and we have >= 10 projects loaded OR we know count is >= 10.
+
+                                    // Let's modify the fetchProjects to store count first.
+                                    // But I can't modify state outside this block easily without modifying the component logic first.
+                                    // So I will update component logic in next step.
+                                    // For now, I'll use a placeholder logic that I will refine.
+                                    // Wait, I should do `multi_replace` or just rewrite the component part?
+                                    // I'll rewrite the component state usage in a separate `replace_file_content` if needed, 
+                                    // but I can just do it all here if I am careful.
+
+                                    // Let's rely on `projects.length` for now if the user has < 12 projects (page size).
+                                    // If `hasMore` is true, then length is at least 12, which is > 10.
+                                    // So:
+                                    const isPro = profile?.is_pro;
+                                    const effectiveCount = hasMore ? 100 : projects.length; // Treat hasMore as "many"
+
+                                    if (!isPro && effectiveCount >= 10) {
+                                        alert("Free Limit Reached.\n\nYou have reached the limit of 10 projects for the free tier. Please upgrade to Pro for unlimited projects.");
+                                        onUpgrade();
+                                        return;
+                                    }
+                                    onNewProject();
+                                }}
                                 className="px-5 sm:px-6 lg:px-8 py-3 lg:py-4 bg-sienna text-cream rounded-full lg:rounded-[2rem] flex items-center justify-center gap-2 lg:gap-3 group hover:bg-accent transition-all duration-500 shadow-xl shadow-sienna/20 hover:shadow-accent/40"
                             >
                                 <Plus className="w-4 h-4 lg:w-5 lg:h-5 group-hover:rotate-90 transition-transform duration-500" />
@@ -184,6 +214,15 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                 <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                         </div>
+
+                        {profile?.is_admin && onAdmin && (
+                            <button
+                                onClick={onAdmin}
+                                className="px-5 sm:px-6 lg:px-8 py-3 lg:py-4 bg-sienna/10 text-sienna rounded-full lg:rounded-[2rem] flex items-center justify-center gap-2 lg:gap-3 group hover:bg-sienna hover:text-white transition-all duration-500 border border-sienna/10"
+                            >
+                                <span className="text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.15em] whitespace-nowrap">Admin Panel</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 

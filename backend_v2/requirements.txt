@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+python-multipart
+torch==2.1.2
+torchvision==0.16.2
+controlnet_aux==0.0.7
+vtracer
+opencv-python
+numpy<2.0.0
+Pillow
+accelerate
+safetensors
+transformers==4.36.2
+requests
+scipy
+timm

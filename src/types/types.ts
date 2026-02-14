@@ -34,3 +34,13 @@ export interface DeviceInfo {
     memory?: number;
     cores?: number;
 }
+
+export interface Profile {
+    id: string;
+    nickname: string | null;
+    avatar_url: string | null;
+    is_pro: boolean;
+    ai_credits: number;
+    last_credit_reset: string;
+    is_admin?: boolean; // New admin flag
+}
